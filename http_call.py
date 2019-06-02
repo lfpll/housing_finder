@@ -89,7 +89,7 @@ def call_posts(body_list, proxy_rotator, url, loop = asyncio.get_event_loop(), d
 	if len(body_list) >0:
 		print('%s proxys restantes' % str(len(proxy_rotator.proxys)))
 		print('%s urls restantes' % len(body_list))
-		return call_posts(body_list=body_list, proxy_rotator=proxy_rotator, loop=loop, data_col=data_col)
+		return call_posts(body_list=body_list, proxy_rotator=proxy_rotator,url=url, loop=loop, data_col=data_col)
 	else:
 		return data_col
 
