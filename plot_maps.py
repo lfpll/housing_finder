@@ -35,3 +35,4 @@ marker_layer = gmaps.marker_layer(plant_locations,info_box_content=plant_info)
 fig = gmaps.figure(center=(-25.4344698,-49.2788269))
 fig.add_layer(marker_layer)
 fig
+
