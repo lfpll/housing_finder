@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import re
-from google.cloud import error_reporting,storage
+from google.cloud import storage,error_reporting
 import hashlib
 import json
 import unidecode
@@ -71,45 +71,39 @@ def parse_page(html_data,html_path):
 	:param html_page: page of html
 	:return: a dict format value of parsed data
 	'''
-	try:
-		soup = BeautifulSoup(html_data,'lxml')
+	soup = BeautifulSoup(html_data,'lxml')
 
-		# Parsing the interesting data
-		price_block = soup.select('div.block-price-container')
-		attrs_block = soup.select('ul.section-icon-features')
-		addts_block = soup.select('ul.section-bullets')
-		local_block = soup.select('div.article-map')
+	# Parsing the interesting data
+	price_block = soup.select('div.block-price-container')
+	attrs_block = soup.select('ul.section-icon-features')
+	addts_block = soup.select('ul.section-bullets')
+	local_block = soup.select('div.article-map')
 
-		# Transforming data indo a format of interest
-		price_tups = parse_price(price_block)
-		attrs_tup = parse_attributes(attrs_block)
-		addts_tup = parse_additives(addts_block)
-		local_tup = parse_get_location(local_block)
+	# Transforming data indo a format of interest
+	price_tups = parse_price(price_block)
+	attrs_tup = parse_attributes(attrs_block)
+	addts_tup = parse_additives(addts_block)
+	local_tup = parse_get_location(local_block)
 
-		# Transforming into a final tup
-		final_tups = []
-		final_tups.extend(attrs_tup)
-		final_tups.append(('additions', addts_tup))
-		final_tups.extend(price_tups)
-		final_tups.extend(local_tup)
-		
-		json_file = json.dumps({unidecode.unidecode(key): val for key, val in final_tups})
+	# Transforming into a final tup
+	final_tups = []
+	final_tups.extend(attrs_tup)
+	final_tups.append(('additions', addts_tup))
+	final_tups.extend(price_tups)
+	final_tups.extend(local_tup)
+	
+	json_file = json.dumps({unidecode.unidecode(key): val for key, val in final_tups})
 
-		m = hashlib.md5()
-		m.update(html_path.encode('utf-8'))
-		hex_name = str(int(m.hexdigest(), 16))
-		storage_client = storage.Client()
-		bucket = storage_client.get_bucket('imoveis_data')
-		blob = bucket.blob('json_files/{hex_name}.json'.format(hex_name=hex_name))
+	m = hashlib.md5()
+	m.update(html_path.encode('utf-8'))
+	hex_name = str(int(m.hexdigest(), 16))
+	storage_client = storage.Client()
+	bucket = storage_client.get_bucket('imoveis_data')
+	blob = bucket.blob('json_files/{hex_name}.json'.format(hex_name=hex_name))
 
-		blob.upload_from_string(json_file)
+	blob.upload_from_string(json_file)
 
-
-	except Exception as error:
-		print(error)
-		error_client = error_reporting.Client()
-		error_client.report_exception()
-
+	
 def parse_all_files():
 	storage_client = storage.Client()
 	bucket = storage_client.get_bucket('imoveis_data')
@@ -118,3 +112,4 @@ def parse_all_files():
 		path = blob.name.split('/')[-1]
 		parse_page(html_data=blob.download_as_string(),html_path=path)
 
+parse_all_files()
