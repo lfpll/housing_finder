@@ -7,8 +7,8 @@ import hashlib
 
 
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
-
-def save_to_storage(data, context):
+-
+def save_to_storage(data):
 	"""Receives an url on the data.data value
 	   Publish value to pub\sub if fails
 	   Download the page to google storage if it works
@@ -19,12 +19,12 @@ def save_to_storage(data, context):
 	"""
 
 	# Getting the information from the page
-	name = base64.b64decode(data['data']).decode('utf-8')
-	url = name
+	url = base64.b64decodebase64.b64decode(data['data']).decode('utf-8')).decode('utf-8')
 	response = requests.get(url,headers=headers)
 
 	# If the request fail send again to pubsub
 	products_topic = 'projects/educare-226818/topics/child_scrape'
+	json_topic = 'projects/educare-226818/topics/json''
 	publisher = pubsub_v1.PublisherClient()
 
 	# If the status is not 200 the requestor was blocked
@@ -42,6 +42,5 @@ def save_to_storage(data, context):
 			bucket_name = 'imoveis_data'
 			bucket = storage_client.get_bucket(bucket_name)
 			m.update(url)
-			hash_id = str(int(m.hexdigest(), 16))
-			blob = bucket.blob('/imoveis_web/{hash_id}'.format(hash_id=hash_id))
+			blob = bucket.blob('/{hash_id}'.format(hash_id=hash_id))
 			blob.upload_from_string(response.content)

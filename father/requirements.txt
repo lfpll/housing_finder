@@ -1,4 +1,6 @@
 bs4 
 google-cloud-pubsub
+google-cloud-storage
 requests
-base64
+google-cloud-error_reporting
+unidecode
