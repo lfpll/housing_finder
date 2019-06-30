@@ -22,7 +22,7 @@ def parse_imovel_page(data, context):
         client = storage.Client()
         bucket = client.get_bucket('imoveis-data')
         path_name = base64.b64decode(data['data']).decode('utf-8')
-        blob = bucket.get_blob(path_name)
+        blob = bucket.blob(path_name)
         html_data = blob.download_as_string()
         soup = BeautifulSoup(html_data, 'lxml')
         # Parsing the interesting data
@@ -31,6 +31,8 @@ def parse_imovel_page(data, context):
         addts_block = soup.select('ul.section-bullets')
         local_block = soup.select('div.article-map')
         scripts = soup.find_all('script')
+        pub_code = list(set(soup.find_all('span',{'class':'publisher-code'})))
+        pub_date = soup.find('h5',{'class':['section-date','css-float-r']})
         filter_scripts = list(filter(lambda val: regex_map.search(val.text), scripts))
         # Transforming data indo a format of interest
 
@@ -80,6 +82,7 @@ def parse_imovel_page(data, context):
                           price_regexp in price_list]
             final_tups.extend(price_list)
 
+        # Block of latitude and longitud
         if len(local_block) == 1 or len(filter_scripts) > 0:
 
             if len(filter_scripts) > 0:
@@ -99,7 +102,24 @@ def parse_imovel_page(data, context):
                     lat_long = [('latitude', lat_long[0].replace(',', '')), ('longitute', lat_long[1].replace(',', ''))]
 
             final_tups.extend(lat_long)
+        
+        # Publisher info
+        if len(pub_code) >0 :
+            # Getting the code of the apartament and the anouncer code
+            for soup_obj in pub_code:
+                text = soup_obj.text.split(':')
+                if text[0].find('anunciante') >-1:
+                    final_tups.append(('pub_anun',float(text[-1])))
+                elif text[0].find('Imovelweb') >-1:
+                    final_tups.append(('pub_code',int(text[-1])))
+        
+        # Publication Date
+        if pub_date is not None:
+            final_tups.append(('pub_data',pub_date))
 
+        if len(final_tups) == 0:
+            raise Exception('Impossible do parse %s'%path_name)
+            
         json_file = json.dumps({unidecode.unidecode(key).strip().replace(' ', '_').lower(): val for key, val in final_tups})
         bucket = client.get_bucket('bigtable-data')
         new_blob = bucket.blob('{hex_name}.json'.format(hex_name=path_name.replace('.html', '')))
