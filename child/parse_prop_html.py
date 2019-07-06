@@ -29,12 +29,11 @@ def parse_imovel_page(data, context):
         html_data = blob.download_as_string()
         soup = BeautifulSoup(html_data, 'lxml')
         
-        # Parsing the interesting data
+        # CSS paths of the data information
         price_block = soup.select('div.block-price-container')
         attrs_block = soup.select('ul.section-icon-features')
         addts_block = soup.select('ul.section-bullets')
         local_block = soup.select('div.article-map')
-        
         pub_code = list(set(soup.find_all('span',{'class':'publisher-code'})))
         pub_date = soup.find('h5',{'class':['section-date','css-float-r']})
 
@@ -42,11 +41,16 @@ def parse_imovel_page(data, context):
         filter_scripts = list(filter(lambda val: regex_map.search(val.text), scripts))
         
         # Transforming data indo a format of interest
-        # List of tuples
+        # List of tuples to transformed into json
         final_tups = []
+
+        # Getting the description of the properties
         description = soup.find('div', id='verDatosDescripcion')
         if description is not None:
             final_tups.append(('descricao', description.text.strip()))
+        
+        # Urls of the imgs
+        # TODO need some fixing 
         try:
             img_urls = []
             for img in soup.find('div', id='tab-foto-flickity').find_all('img'):
@@ -58,7 +62,7 @@ def parse_imovel_page(data, context):
         except:
             error_client.report_exception()
 
-        # Find title
+        # Find title and information in it lie adress and neighborhood
         title_address = soup.find('h2', {'class': 'title-location'})
         if title_address is not None:
             address = title_address.find('b')
@@ -68,6 +72,7 @@ def parse_imovel_page(data, context):
             if neighborhood is not None:
                 final_tups.append(('bairro', neighborhood.text.strip()))
 
+        # Additions of blocks, specific information about apartment
         if len(addts_block) >= 1:
             audits_final_list = []
             addits_list = [additives.find_all('li') for additives in addts_block]
@@ -75,13 +80,14 @@ def parse_imovel_page(data, context):
             audits_final_list = [unidecode.unidecode(auditive.text.strip()) for auditive in audits_final_list]
             final_tups.append(('additions', audits_final_list))
 
-        # Transforming into a final tup
+        # Dynamical attributes gotten from page
         if len(attrs_block) == 1:
             attrs_list = attrs_block[0].select('li')
             attrs_list = [(attrs.find('span').text.strip(), unidecode.unidecode(attrs.find('b').text.strip())) for attrs in
                           attrs_list]
             final_tups.extend(attrs_list)
-
+        
+        # Get dynamical information about the prices
         if len(price_block) == 1:
             price_list = price_block[0].text.strip().split('\n')
             price_list = [regexp_price.search(price) for price in price_list if regexp_price.search(price)]
@@ -118,9 +124,9 @@ def parse_imovel_page(data, context):
             for soup_obj in pub_code:
                 text = soup_obj.text.split(':')
                 if text[0].find('anunciante') >-1:
-                    final_tups.append(('pub_anun',float(text[-1])))
+                    final_tups.append(('pub_anun',text[-1].strip()))
                 elif text[0].find('Imovelweb') >-1:
-                    final_tups.append(('pub_code',int(text[-1])))
+                    final_tups.append(('pub_code',int(text[-1].strip())))
         
         # Publication Date
         if pub_date is not None:
@@ -131,7 +137,7 @@ def parse_imovel_page(data, context):
             raise Exception('Impossible do parse %s'%path_name)
         
         # Adding current date for bigquery
-        final_tups.append(('date',datetime.now()))
+        final_tups.append(('date_stored',str(datetime.now())))
 
         json_file = json.dumps({unidecode.unidecode(key).strip().replace(' ', '_').lower(): val for key, val in final_tups})
         bucket = client.get_bucket('bigtable-data')
