@@ -1,6 +1,7 @@
-bs4 
-google-cloud-pubsub
 google-cloud-storage
-requests
+google-cloud-pubsub
 google-cloud-error_reporting
-unidecode
+bs4
+lxml
+requests
+

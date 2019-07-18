@@ -1,5 +1,4 @@
-from google.cloud import storage
-from google.cloud import pubsub_v1, error_reporting
+from google.cloud import storage,pubsub_v1, error_reporting
 from bs4 import BeautifulSoup
 import requests
 import base64
@@ -17,7 +16,7 @@ def download_html(data, context):
             context {[type]} -- [description]
     """
     try:
-    # Getting the information from the page
+        # Getting the information from the page
         url = base64.b64decode(data['data']).decode('utf-8')
         response = requests.get(url, headers=headers)
 
@@ -30,9 +29,9 @@ def download_html(data, context):
         if response.status_code != 200:
             publisher.publish(products_topic, url.encode('utf-8'))
         else:
-            # Get the filename name
             storage_client = storage.Client(project='educare')
-            soup = BeautifulSoup(response.text)
+            soup = BeautifulSoup(response.text,'lxml')
+            # Checking for error in the page (Case of no http errors implemented)
             if soup.select('title')[0].text == 'Error 500':
                 publisher.publish(products_topic, url.encode('utf-8'))
             else:
@@ -44,7 +43,7 @@ def download_html(data, context):
                 bucket = storage_client.get_bucket(bucket_name)
                 blob = bucket.blob(data_name)
                 blob.upload_from_string(response.content)
-                # Publish path
+                # Publish path to be parsed
                 publisher.publish(json_topic, data_name.encode('utf-8'))
     except Exception as error:
         error_client = error_reporting.Client()
