@@ -6,7 +6,7 @@ import base64
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
 
-def download_html(data, context):
+def download_page(data, context):
     """Receives an url on the data.data value
        Publish value to pub\sub if fails
        Download the page to google storage if it works

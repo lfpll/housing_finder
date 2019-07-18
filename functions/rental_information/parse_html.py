@@ -12,7 +12,7 @@ regexp_price = re.compile('^(\w+)(?:\s*)R\$(?:\s*)(\w+\.?(?:\w+)?\,?(?:\w+)?)')
 regexp_markers = re.compile('markers=(.+?)\&')
 regex_map = re.compile('\'mapLat\'|\'mapLng\'')
 
-def parse_imovel_page(data, context):
+def parse_propertie_page(data, context):
     '''
     Parse the html page from imoveis web
     :param html_page: page of html
