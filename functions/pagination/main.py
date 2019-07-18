@@ -2,6 +2,9 @@ from bs4 import BeautifulSoup
 from google.cloud import pubsub_v1,error_reporting
 import requests
 import base64
+import os
+
+out_topic = os.environ['OUT_TOPIC']
 
 
 def parse_and_paginate(data, context):
@@ -25,10 +28,9 @@ def parse_and_paginate(data, context):
         next_url = next_url[0].select('a')[0]['href']
         publisher.publish(pagination_topic, (father_url + next_url).encode('utf-8'))
 
-    products_topic = 'projects/educare-226818/topics/child_scrape'
     # Pages of producst
     if soup.select('title')[0].text == 'Error 500':
-        publisher.publish(products_topic, url.encode('utf-8'))
+        publisher.publish(out_topic, url.encode('utf-8'))
     else:
         products_soups = soup.select('a.go-to-posting')
         if len(products_soups) <= 0:
@@ -38,4 +40,4 @@ def parse_and_paginate(data, context):
 
         # Publishing urls to the products topic
         for product in products_url:
-            publisher.publish(products_topic, product.encode('utf-8'))
+            publisher.publish(out_topic, product.encode('utf-8'))
