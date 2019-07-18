@@ -4,7 +4,7 @@ import requests
 import base64
 
 
-def parse_head_page(data, context):
+def parse_and_paginate(data, context):
     name = base64.b64decode(data['data']).decode('utf-8')
     publisher = pubsub_v1.PublisherClient()
 
