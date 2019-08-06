@@ -12,9 +12,11 @@ regexp_price = re.compile('^(\w+)(?:\s*)R\$(?:\s*)(\w+\.?(?:\w+)?\,?(?:\w+)?)')
 regexp_markers = re.compile('markers=(.+?)\&')
 regex_map = re.compile('\'mapLat\'|\'mapLng\'')
 
+_IN_BUCKET = os.environ['IN_BUCKET'] #'imoveis-data'
+_OUT_BUCKET = os.environ['OUT_BUCKET'] # bigtable-data
 def parse_propertie_page(data, context):
     '''
-    Parse the html page from imoveis web
+    Parse the html page from imoveis web and transform into a json file and stores at google storage
     :param html_page: page of html
     :return: a dict format value of parsed data
     '''
@@ -23,9 +25,12 @@ def parse_propertie_page(data, context):
         # Initializing the data
         error_client = error_reporting.Client()
         client = storage.Client()
-        bucket = client.get_bucket('imoveis-data')
-        path_name = base64.b64decode(data['data']).decode('utf-8')
-        blob = bucket.blob(path_name)
+        bucket = client.get_bucket(_IN_BUCKET)
+        json_obj = json.loads(base64.b64decode(data['data']).decode('utf-8'))
+        
+        file_path = json_obj['file_path']
+        url = json_obj['url']
+        blob = bucket.blob(file_path)
         html_data = blob.download_as_string()
         soup = BeautifulSoup(html_data, 'lxml')
         
@@ -50,7 +55,7 @@ def parse_propertie_page(data, context):
             final_tups.append(('descricao', description.text.strip()))
         
         # Urls of the imgs
-        # TODO need some fixing 
+        # TODO need some fixing on the images
         try:
             img_urls = []
             for img in soup.find('div', id='tab-foto-flickity').find_all('img'):
@@ -61,7 +66,7 @@ def parse_propertie_page(data, context):
             final_tups.append(('imgs', img_urls))
         except:
             error_client.report_exception()
-
+        final_tups.append(('url',url))
         # Find title and information in it lie adress and neighborhood
         title_address = soup.find('h2', {'class': 'title-location'})
         if title_address is not None:
@@ -97,20 +102,17 @@ def parse_propertie_page(data, context):
 
         # Block of latitude and longitud
         if len(local_block) == 1 or len(filter_scripts) > 0:
-
+            
             if len(filter_scripts) > 0:
                 lat_long_script = filter_scripts[0].text
-                
                 lat_long = list(filter(lambda val: regex_map.search(val), lat_long_script.split('\n')))
                 lat_long = list(map(lambda val: tuple(
                     val.replace(' ', '').replace("'", '').replace(',', '').replace('mapLat', 'latitude').replace('mapLng',
                                                                                                                  'longitude').strip().split(
                         ':')), lat_long))
                 lat_long = [tuple((key,float(val))) for key,val in lat_long]
-
             else:
                 image_url = local_block[0].find('img')
-
                 if regexp_markers.search(image_url):
                     url_parse = regexp_markers.search(image_url['src']).group(1).split(',')
                     lat_long = [float(float_val) for float_val in url_parse]
@@ -134,15 +136,14 @@ def parse_propertie_page(data, context):
 
         # No data gotten from value
         if len(final_tups) == 0:
-            raise Exception('Impossible do parse %s'%path_name)
+            raise Exception('Impossible do parse %s'%file_path)
         
         # Adding current date for bigquery
         final_tups.append(('date_stored',str(datetime.now())))
 
         json_file = json.dumps({unidecode.unidecode(key).strip().replace(' ', '_').lower(): val for key, val in final_tups})
-        bucket = client.get_bucket('bigtable-data')
-        new_blob = bucket.blob('{hex_name}.json'.format(hex_name=path_name.replace('.html', '')))
-
+        bucket = client.get_bucket(_OUT_BUCKET)
+        new_blob = bucket.blob('{hex_name}.json'.format(hex_name=file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
 
     except Exception as error:

@@ -6,4 +6,4 @@ venv/
 token_gcloud.json
 *.json
 *.csv
-
+.metals/

@@ -2,49 +2,56 @@ from google.cloud import storage,pubsub_v1, error_reporting
 from bs4 import BeautifulSoup
 import requests
 import base64
+import json
 
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
+# Bucket where the data will be stored
+bucket_name = os.environ["DELIVER_BUCKET"]
+sub_topic = os.environ["SAME_TOPIC"] # 'projects/educare-226818/topics/child_scrape'
+pub_topic = os.environ["OUT_TOPIC"] # 'projects/educare-226818/topics/html_path'
+project_name = os.environ['PROJECT_NAME'] # educare
 
+# TODO add max retries to publish
 def download_page(data, context):
     """Receives an url on the data.data value
        Publish value to pub\sub if fails
        Download the page to google storage if it works
 
     Arguments:
-            data {[type]} -- [description]
-            context {[type]} -- [description]
+            data {[base64 encoded string]} -- object json encoded with data:{file_path}
+            context {[object]} -- [description]
     """
     try:
-        # Getting the information from the page
+        # Getting the url to be paginated
         url = base64.b64decode(data['data']).decode('utf-8')
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers)    
+        publisher = pubsub_v1.PublisherClient(project_name)
 
-        # If the request fail send again to pubsub
-        products_topic = 'projects/educare-226818/topics/child_scrape'
-        json_topic = 'projects/educare-226818/topics/html_path'
-        publisher = pubsub_v1.PublisherClient()
-
-        # If the status is not 200 the requestor was blocked
+        # If the status is not 200 the requestor was blocked send back
         if response.status_code != 200:
-            publisher.publish(products_topic, url.encode('utf-8'))
+            publisher.publish(sub_topic, url.encode('utf-8'))
         else:
-            storage_client = storage.Client(project='educare')
+            storage_client = storage.Client(project_name)
             soup = BeautifulSoup(response.text,'lxml')
-            # Checking for error in the page (Case of no http errors implemented)
+            
+            # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':
-                publisher.publish(products_topic, url.encode('utf-8'))
+                publisher.publish(sub_topic, url.encode('utf-8'))
             else:
                 # Saving the html by the url name
-                data_name = url.split('/')[-1]
-
+                file_name = url.split('/')[-1]
+                pub_obj_encoded = json.dumps({'file_path':file_name,'url':url}).
+                                    encode("utf-8")
+                
                 # Opening the bucket connection
-                bucket_name = 'imoveis-data'
                 bucket = storage_client.get_bucket(bucket_name)
-                blob = bucket.blob(data_name)
+                blob = bucket.blob(file_name)
                 blob.upload_from_string(response.content)
-                # Publish path to be parsed
-                publisher.publish(json_topic, data_name.encode('utf-8'))
+                
+                # Publish path to be parsed and transformed to json
+                publisher.publish(pub_topic, publish_obj)
+
     except Exception as error:
         error_client = error_reporting.Client()
         error_client.report_exception()
