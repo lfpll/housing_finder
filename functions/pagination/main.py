@@ -12,16 +12,17 @@ log_client(log_level=logging.INFO, excluded_loggers=("werkzeug",))
 
 
 # Variables to make pagination works
-out_topic = os.environ['OUT_TOPIC']
-page_topic = os.environ['PAGE_TOPIC']
-base_url = os.environ['BASE_URL'] # father_url = "https://www.imovelweb.com.br"
-parsing_selector = os.environ['PARSE_SELECTOR'] # 'a.go-to-posting
+_IN_BUCKET = os.environ["DELIVER_BUCKET"]
+_THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"] # 'projects/educare-226818/topics/child_scrape'
+_DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"] # 'projects/educare-226818/topics/html_path'
+_PROJECT_NAME = os.environ['PROJECT_NAME'] # educare
+_BASE_URL = os.environ['BASE_URL'] # father_url = "https://www.imovelweb.com.br"
+_PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR'] # 'li.pag-go-next')
+_CSS_SELECTOR = os.environ['PARSE_SELECTOR'] # 'a.go-to-posting
 
-
-# TODO implement change on the way that the objects work, pass values of repeteation
 
 def parse_and_paginate(data, context):
-    """Function that parses the page from pagination
+    """Function that parses the page from pagination and sends the next page to pubsub
     
     Arguments:
         data {[base64.encoded]} -- object of pubsub with hashed url on data['data']
@@ -32,37 +33,48 @@ def parse_and_paginate(data, context):
     """
     log_client = google.cloud.logging.Client()
     log_client(log_level=logging.INFO, excluded_loggers=("werkzeug",))
-    url_decoded = base64.b64decode(data['data']).decode('utf-8')
+    json_decoded = json.loads(base64.b64decode(data['data']).decode('utf-8'))
     
-    publisher = pubsub_v1.PublisherClient()
-    response = requests.get(url_decoded)
-    pagination_topic = 'projects/educare-226818/topics/scrape'
-    # If the request fail send again to pubsub
-    # TODO implement max number of publishing
-    if response.status_code != 200:
-        publisher.publish(pagination_topic, url.encode('utf-8'))
-    else:
-        soup = BeautifulSoup(response.content,'lxml')
-        # Next page
-        next_url = soup.select('li.pag-go-next')
+    url_decode = json_decoded['url']
+    tries = int(json_decoded['tries']) + 1
 
-        # Check if html is valid
+    # Creating element and getting response
+    publisher = pubsub_v1.PublisherClient()
+
+
+    # Object for failture
+    pub_obj_encoded = json.dumps({'url':url_decode,'tries':tries}).encode("utf-8")
+    
+    response = requests.get(url_decode)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content,'lxml')
+        next_url = soup.select(_PAGINATION_CSS_SELECTOR)
+        # If the request fail send again to pubsub
         if soup.select('title')[0].text == 'Error 500':
-            publisher.publish(out_topic, url.encode('utf-8'))
-        elif len(next_url) > 0:
+            if tries < 5:
+                publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
+            else:
+                logging.warn("{current_url} Was already parsed 5 times, ended with 500 page".format(current_url=url))
+            quit()
+        elif len(next_url) <= 0:
             # Loging if there is no next url
             date = str(datetime.now())
             logging.info("Last url of {date} is {url}".format(date=date,current_url=url))
-            next_url = next_url[0].select('a')[0]['href']
-            publisher.publish(pagination_topic, (base_url + next_url).encode('utf-8'))
         else:
-            # Products <a/> attributes to be parsed
-            products_soups = soup.select(parsing_selector)
-            if len(products_soups) <= 0:
-                raise Exception('Invalid value of products')
-            products_url = [base_url + attribute['href']
-                            for attribute in products_soups]
+            next_url = next_url[0].select('a')[0]['href']
+            publisher.publish(_THIS_FUNCTION_TOPIC, (_BASE_URL + next_url).encode('utf-8'))
+        
+        # Products <a/> attributes to be parsed
+        products_soups = soup.select(_CSS_SELECTOR)
+        if len(products_soups) <= 0:
+            raise Exception('Invalid value of products')
+        products_url = [_BASE_URL + attribute['href'] for attribute in products_soups]
 
-            # Publishing urls to the products topic
-            for product in products_url:
-                publisher.publish(out_topic, product.encode('utf-8'))
+        # Publishing urls to the products topic
+        for product in products_url:
+            publisher.publish(_DOWNLOAD_HTML_TOPIC, product.encode('utf-8'))
+    else:
+        if tries < 5:
+            publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
+        else:
+            logging.warn("{current_url} Was already parsed 5 times, ended with http errors".format(current_url=url))
