@@ -8,6 +8,7 @@ import base64
 import unidecode
 import requests
 
+# Regular expressions used on the parsing
 regexp_price = re.compile('^(\w+)(?:\s*)R\$(?:\s*)(\w+\.?(?:\w+)?\,?(?:\w+)?)')
 regexp_markers = re.compile('markers=(.+?)\&')
 regex_map = re.compile('\'mapLat\'|\'mapLng\'')
@@ -15,12 +16,19 @@ regex_map = re.compile('\'mapLat\'|\'mapLng\'')
 _IN_BUCKET = os.environ['IN_BUCKET'] #'imoveis-data'
 _OUT_BUCKET = os.environ['OUT_BUCKET'] # bigtable-data
 def parse_propertie_page(data, context):
-    '''
-    Parse the html page from imoveis web and transform into a json file and stores at google storage
-    :param html_page: page of html
-    :return: a dict format value of parsed data
-    '''
+    """This a lambda function for cloud function on the google cloud
+       This receiveis two inputs 
+       The interesting one is the data which comes from pub/sub
+       This get a path an html from gcs insite data['data']['filename'] and parse this html
+       At the end with this html parsed it's store on the _OUT_BUCKET as a json
 
+    Arguments:
+        data {[dict]} -- [{"file_name":GCS path of file, "url":the url origin of the file}]
+        context {[dict]} -- [description]
+    
+    Raises:
+        Exception: [Exception for erros on the process]
+    """
     try:
         # Initializing the data
         error_client = error_reporting.Client()
