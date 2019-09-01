@@ -1,35 +1,50 @@
-import pytest
+import sys
 import os
-import logging
-import base64
+from os.path import dirname
 import requests
-import queue
-from google.cloud import pubsub_v1
+import pytest
+from google.cloud import pubsub_v1, logging
+    
+PARENT_PATH = os.path.abspath(os.path.join(dirname(__file__), os.pardir))
+SAMPLES_FOLDER = PARENT_PATH + '/samples/'
+sys.path.append(PARENT_PATH)
 
-
-# Class to substitute the pub sub on python
-class pub_substitute:
-        def __init__(self):
-            pub_test_queue = queue.Queue()
-            logging.info("PubSub initialized")
-
-        def publish(self,out_topic,data):
-            self.pub_test_queue.put(data)
-            data_decoded = base64.b64decode(data)
-            logging.info("{data} written to {topic}".format(data_decoded,out_topic))
-        
-        def subscribe(self,in_topic):
-            logging.info("{data} read from {topic}".format(data,out_topic))
-            return self.pub_test_queue.get()
-
-# Mocking the /cloud pubsub function
 @pytest.fixture(autouse=True)
-def mock_gcloud_pubsub(monkeypatch):
-    monkeypatch.setattr(pubsub_v1,'PublisherClient',pub_substitute)
+def mock_cloud_logging(monkeypatch):
+
+    class Mock_log_client:
+
+        def __init__(self):
+            self.a = ''
+
+        def get_default_handler(self):
+            return ''
+
+        def setup_logging(self, log_level, excluded_loggers):
+            return ''
+
+    monkeypatch.setattr(logging, 'Client', Mock_log_client)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
+def mock_gcloud_publisher(monkeypatch):
+    mock
+    class Mock_pub_client:
+
+        def __init__(self):
+            self.a = ''
+
+        def publish(self, topic, message):
+            print(topic, message)
+    monkeypatch.setattr(pubsub_v1, 'PublisherClient', Mock_pub_client)
+
+
+@pytest.fixture(autouse=True)
 def mock_request_200(monkeypatch):
+
     def get_200_replacer(file_path):
-        return {'content':open(file_path,'r').read(),'status_code':200}
-    monkeypatch.setattr(requests,'get',get_200_replacer)    
+        response_mock = requests.Response()
+        response_mock.status_code = 200
+        response_mock._content = open(SAMPLES_FOLDER+file_path, 'r').read()
+        return response_mock
+    monkeypatch.setattr(requests, 'get', get_200_replacer)

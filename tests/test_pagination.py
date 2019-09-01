@@ -1,24 +1,23 @@
-from functions.pagination import main as module_test
 import os
+
+os.environ["DELIVER_BUCKET"] = 'deliver_bucket'
+os.environ["THIS_TOPIC"] = 'projects/educare-226818/topics/child_scrape'
+os.environ["DOWNLOAD_HTML_TOPIC"] = 'projects/educare-226818/topics/html_path'
+os.environ['PROJECT_NAME'] = 'educare'
+os.environ['BASE_URL'] = "https://www.imovelweb.com.br"
+os.environ['PAGINATION_SELECTOR'] = 'li.pag-go-next'
+os.environ['PARSE_SELECTOR'] = 'a.go-to-posting'
+
+from google.cloud import pubsub_v1
+from google.auth import credentials
+from functions.pagination import main as paging
 import base64
 import json
-# This is for testing the pagination lambda function4
-# 1 - Test for sucesfull
-# 2 - Test for errors on http code
-# 3 - Test for incorrect schema on html page
-
-config = json.load(open("pagination_test.json"))
-
-# Populating enviroment variables for the test
-for key,val in config.keys(mock_request_200):
-    os.environ[key] = val
-
-def test_pagination_success(mock_request_200):
-    data_path = './sample/pagination_page.html'
-    b64encoded = base64.b64encode({'data':data_path}).decode('utf-8')
-    context = None
-    
-    
 
 
-    
+
+def test_pagination():
+    data_path = 'pagination_page.html'
+    encoded_obj = base64.b64encode(json.dumps({'data':{'url':data_path}}).encode('utf-8'))
+    paging.parse_and_paginate(encoded_obj,'')
+    breakpoint()
