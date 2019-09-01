@@ -21,7 +21,6 @@ LOGGER.addHandler(handler)
 _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]
 # 'projects/educare-226818/topics/html_path'
 _DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]
-_PROJECT_NAME = os.environ['PROJECT_NAME']  # educare
 # father_url = "https://www.imovelweb.com.br"
 _BASE_URL = os.environ['BASE_URL']
 # 'li.pag-go-next'
@@ -51,7 +50,7 @@ def parse_and_paginate(message, context):
         if tries < 5:
             publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
         else:
-            logging.warning(
+            logging.error(
                 "%s Was already parsed 5 times, ended with %s page", url, error)
         quit()
     data = base64.b64decode(message['data']).decode('utf-8')
@@ -87,8 +86,7 @@ def parse_and_paginate(message, context):
             pub_next_obj = json.dumps({'url':_BASE_URL + next_url})
             publisher.publish(_THIS_FUNCTION_TOPIC,pub_next_obj.encode('utf-8'))
         else:
-            date = str(datetime.now())
-            logging.info("Last url of %s is %s", date, url_decode)
+            logging.info("Last url %s", url_decode)
 
         # Products <a/> attributes to be parsed
         products_soups = soup.select(_CSS_SELECTOR)
@@ -99,7 +97,8 @@ def parse_and_paginate(message, context):
 
         # Publishing urls to the products topic
         for product in products_url:
-            publisher.publish(_DOWNLOAD_HTML_TOPIC, product.encode('utf-8'))
+            product_obj = json.dumps({"url":product})
+            publisher.publish(_DOWNLOAD_HTML_TOPIC, product_obj.encode('utf-8'))
     else:
         __error_path(publisher, pub_obj_encoded, tries,
                      url_decode, error=response.status_code)
