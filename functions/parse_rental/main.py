@@ -7,14 +7,17 @@ import json
 import base64
 import unidecode
 import requests
-
+import os
 # Regular expressions used on the parsing
-regexp_price = re.compile('^(\w+)(?:\s*)R\$(?:\s*)(\w+\.?(?:\w+)?\,?(?:\w+)?)')
-regexp_markers = re.compile('markers=(.+?)\&')
+
+regexp_price = re.compile(r'^(\w+)(?:\s*)R\$(?:\s*)(\w+\.?(?:\w+)?\,?(?:\w+)?)')
+regexp_markers = re.compile(r'markers=(.+?)\&')
 regex_map = re.compile('\'mapLat\'|\'mapLng\'')
 
+# Enviroment variables 
 _IN_BUCKET = os.environ['IN_BUCKET'] #'imoveis-data'
 _OUT_BUCKET = os.environ['OUT_BUCKET'] # bigtable-data
+
 def parse_propertie_page(data, context):
     """This a lambda function for cloud function on the google cloud
        This receiveis two inputs 

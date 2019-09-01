@@ -35,7 +35,7 @@ My first ambtion here is to have workflow from the imoevelweb website
 4. Create a automatically process that detects ulrs offline
 5. Finding problems, treating bigquery data and others.
 
-**TL;DR:** *This is a simple fun mock project because I love data, cloud and speed development, the main purpose is to help people with find better housing at Brasil.*
+**TL;DR:**This is a simple fun mock project because I love data, cloud and speed development, the main purpose is to help people with find better housing at Brasil.*
 
 #### Notes
 The tagging system will be strange because that's what I'm using to CD into GCP.

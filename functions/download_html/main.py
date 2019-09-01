@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import requests
 import base64
 import json
+import os 
 
 headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
@@ -39,12 +40,11 @@ def download_page(data, context):
             
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':
-                publisher.publish(sub_topic, url.encode('utf-8'))
+                publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
             else:
                 # Saving the html by the url name
                 file_name = url.split('/')[-1]
-                pub_obj_encoded = json.dumps({'file_path':file_name,'url':url}).
-                                    encode("utf-8")
+                pub_obj_encoded = json.dumps({'file_path':file_name,'url':url}).encode("utf-8")
                 
                 # Opening the bucket connection
                 bucket = storage_client.get_bucket(_IN_BUCKET)
@@ -54,6 +54,6 @@ def download_page(data, context):
                 # Publish path to be parsed and transformed to json
                 publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
 
-    except Exception as error:
+    except Exception:
         error_client = error_reporting.Client()
         error_client.report_exception()
