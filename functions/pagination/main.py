@@ -83,7 +83,7 @@ def parse_and_paginate(message, context):
         elif next_url:
             # Loging if there is no next url and publish
             next_url = next_url[0].select('a')[0]['href']
-            pub_next_obj = json.dumps({'url':_BASE_URL + next_url})
+            pub_next_obj = json.dumps({"url":_BASE_URL + next_url})
             publisher.publish(_THIS_FUNCTION_TOPIC,pub_next_obj.encode('utf-8'))
         else:
             logging.info("Last url %s", url_decode)

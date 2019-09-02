@@ -70,8 +70,10 @@ def parse_propertie_page(data, context):
         try:
             img_urls = []
             for img in soup.find('div', id='tab-foto-flickity').find_all('img'):
-                if img['src'].startswith('http'):
-                    img_urls.append(img['src'])
+                if 'src' in img and img['src'].startswith('http'):
+                    img_urls.append(img['alt'])
+                elif 'alt' in img and img['alt'].startswith('http'):
+                    img_urls.append(img['alt'])
                 elif 'lazyload' in img and img['lazyload'].startswith('http'):
                     img_urls.append(img['lazyload'])
             final_tups.append(('imgs', img_urls))
