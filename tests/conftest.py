@@ -4,7 +4,7 @@ from os.path import dirname
 import requests
 import pytest
 from google.cloud import pubsub_v1, logging
-    
+
 PARENT_PATH = os.path.abspath(os.path.join(dirname(__file__), os.pardir))
 SAMPLES_FOLDER = PARENT_PATH + '/samples/'
 sys.path.append(PARENT_PATH)
@@ -28,7 +28,6 @@ def mock_cloud_logging(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def mock_gcloud_publisher(monkeypatch):
-    mock
     class Mock_pub_client:
 
         def __init__(self):
