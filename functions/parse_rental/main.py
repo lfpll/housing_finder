@@ -66,7 +66,6 @@ def parse_propertie_page(data, context):
             final_tups.append(('descricao', description.text.strip()))
         
         # Urls of the imgs
-        # TODO need some fixing on the images
         try:
             img_urls = []
             for img in soup.find('div', id='tab-foto-flickity').find_all('img'):
@@ -80,6 +79,7 @@ def parse_propertie_page(data, context):
         except:
             error_client.report_exception()
         final_tups.append(('url',url))
+
         # Find title and information in it lie adress and neighborhood
         title_address = soup.find('h2', {'class': 'title-location'})
         if title_address is not None:
@@ -113,7 +113,7 @@ def parse_propertie_page(data, context):
                           price_regexp in price_list]
             final_tups.extend(price_list)
 
-        # Block of latitude and longitud
+        # Block of latitude and longitude
         if len(local_block) == 1 or len(filter_scripts) > 0:
             
             if len(filter_scripts) > 0:
@@ -156,7 +156,7 @@ def parse_propertie_page(data, context):
 
         json_file = json.dumps({unidecode.unidecode(key).strip().replace(' ', '_').lower(): val for key, val in final_tups})
         bucket = client.get_bucket(_OUT_BUCKET)
-        new_blob = bucket.blob('{hex_name}.json'.format(hex_name=file_path.replace('.html', '')))
+        new_blob = bucket.blob('stage/{hex_name}.json'.format(hex_name=file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
 
     except Exception as error:
