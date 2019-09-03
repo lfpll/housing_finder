@@ -4,10 +4,11 @@ import os
 from datetime import datetime
 import logging
 from bs4 import BeautifulSoup
-from google.cloud import pubsub_v1, logging as cloud_logging
+from google.cloud import pubsub_v1,error_reporting, logging as cloud_logging
 import requests
 
-
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
 # Instantiating log client
 LOG_CLIENT = cloud_logging.Client()
@@ -51,8 +52,8 @@ def parse_and_paginate(message, context):
             publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
         else:
             logging.error(
-                "%s Was already parsed 5 times, ended with %s page", url, error)
-        quit()
+                "%s pagination already parsed 5 times, ended with %s page", url, error)
+    
     data = base64.b64decode(message['data']).decode('utf-8')
     json_decoded = json.loads(data)
     url_decode = json_decoded['url']
@@ -69,36 +70,38 @@ def parse_and_paginate(message, context):
     pub_obj_encoded = json.dumps(
         {'url': url_decode, 'tries': tries}).encode("utf-8")
 
-    response = requests.get(url_decode)
+    response = requests.get(url_decode,headers=HEADERS)
     if response.status_code == 200:
 
         soup = BeautifulSoup(response.content, 'lxml')
-        # Next url soup object
-        next_url = soup.select(_PAGINATION_CSS_SELECTOR)
+
 
         # If the request has error page 500 follow error path
         if soup.select('title')[0].text == 'Error 500':
             __error_path(publisher, pub_obj_encoded,
                          tries, url_decode, error=500)
-        elif next_url:
-            # Loging if there is no next url and publish
-            next_url = next_url[0].select('a')[0]['href']
-            pub_next_obj = json.dumps({"url":_BASE_URL + next_url})
-            publisher.publish(_THIS_FUNCTION_TOPIC,pub_next_obj.encode('utf-8'))
         else:
-            logging.info("Last url %s", url_decode)
+            # Next url soup object
+            next_url = soup.select(_PAGINATION_CSS_SELECTOR)
+            if next_url:
+                # Loging if there is no next url and publish
+                next_url = next_url[0].select('a')[0]['href']
+                pub_next_obj = json.dumps({"url":_BASE_URL + next_url})
+                publisher.publish(_THIS_FUNCTION_TOPIC,pub_next_obj.encode('utf-8'))
+            else:
+                logging.info("Last url %s", url_decode)
 
-        # Products <a/> attributes to be parsed
-        products_soups = soup.select(_CSS_SELECTOR)
-        if not products_soups:
-            raise Exception('Invalid value of products')
-        products_url = [_BASE_URL + attribute['href']
-                        for attribute in products_soups]
+            # Products <a/> attributes to be parsed
+            products_soups = soup.select(_CSS_SELECTOR)
+            if not products_soups:
+                raise Exception('Invalid value of products')
+            products_url = [_BASE_URL + attribute['href']
+                            for attribute in products_soups]
 
-        # Publishing urls to the products topic
-        for product in products_url:
-            product_obj = json.dumps({"url":product})
-            publisher.publish(_DOWNLOAD_HTML_TOPIC, product_obj.encode('utf-8'))
+            # Publishing urls to the products topic
+            for product in products_url:
+                product_obj = json.dumps({"url":product})
+                publisher.publish(_DOWNLOAD_HTML_TOPIC, product_obj.encode('utf-8'))
     else:
         __error_path(publisher, pub_obj_encoded, tries,
                      url_decode, error=response.status_code)
