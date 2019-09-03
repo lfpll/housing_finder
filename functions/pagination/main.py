@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import logging
 from bs4 import BeautifulSoup
-from google.cloud import pubsub_v1,error_reporting, logging as cloud_logging
+from google.cloud import pubsub_v1, logging as cloud_logging
 import requests
 
 HEADERS = {

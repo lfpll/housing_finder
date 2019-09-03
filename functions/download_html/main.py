@@ -59,13 +59,15 @@ def download_page(message, context):
         file_name = url.split('/')[-1]
 
         storage_client = storage.Client()
-        # Checking if file exists, meaning it was an URL recreated
+    
         
         bucket = storage_client.get_bucket(_OUT_BUCKET)
         blob = bucket.blob(file_name)
+        # Checking if file exists, meaning it was an URL recreated
         if blob.exists():
             bucket = storage_client.get_bucket(_OUT_BUCKET)
-            blob.upload_from_string('update/{0}'.format(file_name))
+            blob = bucket.blob('update/{0}'.format(file_name))
+            blob.upload_from_string('')
         else:
             response = requests.get(url, headers=HEADERS)
             publisher = pubsub_v1.PublisherClient()
