@@ -69,12 +69,15 @@ def parse_propertie_page(data, context):
         try:
             img_urls = []
             for img in soup.find('div', id='tab-foto-flickity').find_all('img'):
-                if 'src' in img and img['src'].startswith('http'):
-                    img_urls.append(img['alt'])
-                elif 'alt' in img and img['alt'].startswith('http'):
-                    img_urls.append(img['alt'])
-                elif 'lazyload' in img and img['lazyload'].startswith('http'):
-                    img_urls.append(img['lazyload'])
+                attrs = img.attrs
+                if 'src' in attrs and attrs['src'].startswith('http'):
+                    img_urls.append(attrs['src'])
+                elif 'alt' in attrs and attrs['alt'].startswith('http'):
+                    img_urls.append(attrs['alt'])
+                elif 'lazyload' in attrs and attrs['lazyload'].startswith('http'):
+                    img_urls.append(attrs['lazyload'])
+                elif 'data-flickity-lazyload' in attrs and attrs['data-flickity-lazyload'].startswith('http'):
+                    img_urls.append(attrs['data-flickity-lazyload'])
             final_tups.append(('imgs', img_urls))
         except:
             error_client.report_exception()
