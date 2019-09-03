@@ -1,6 +1,6 @@
 import sys
 import os
-from pyspark.sql import SparkSession,functions
+from pyspark.sql import SparkSession,functions as F
 from pyspark.sql.types import BooleanType
 
 # Storage to be read with json files
@@ -9,6 +9,7 @@ _INPUT_FOLDER = os.environ['IN_FOLDER']
 # Out file with schema
 _OUT_FILE_PATH = os.environ['OUT_FILE_PATH']
 
+# THIS IS A BAD JOB, I'm using because it's for an small project and runned once
 def set_new_schema(name,type_name):
     """A function that receives the name of the column and the type as spark defines
        And converts to the naming convetiong of bigquery json schema
