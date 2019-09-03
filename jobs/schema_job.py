@@ -1,7 +1,13 @@
 import sys
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
+import os
+from pyspark.sql import SparkSession,functions
 from pyspark.sql.types import BooleanType
+
+# Storage to be read with json files
+_INPUT_FOLDER = os.environ['IN_FOLDER']
+
+# Out file with schema
+_OUT_FILE_PATH = os.environ['OUT_FILE_PATH']
 
 def set_new_schema(name,type_name):
     """A function that receives the name of the column and the type as spark defines
@@ -19,14 +25,14 @@ def set_new_schema(name,type_name):
     type_name = type_name.replace("double","float")
     # Checking if is a nested list 
     if type_name.startswith("array"):
-        type_name = type_name.replace("array<","").replace(">","")
+        type_name = type_name.lower().replace("array<","").replace(">","")
         bq_schema["mode"] = "REPEATED"
     bq_schema["type"] = type_name
     return bq_schema
 
 if __name__ == "__main__":
-    input_path = "gs://bigtable-data/*.json "
-    output_path = "gs://educare-226818.appspot.com/schema_imoveis.json"
+    input_path = _INPUT_FOLDER
+    output_path = _OUT_FILE_PATH
     spark = SparkSession.builder.getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     jsonDF = spark.read.json(input_path)
@@ -43,11 +49,9 @@ if __name__ == "__main__":
     # Getting the ones that can only have one value -> (false or true) not [false,true]
     single_bools_lists = filter(lambda list_bool: len(list_bool) <= 1,unique_booleans)
 
-    # Getting the columns that probably can be casted but there is some mixed types on it
-    ## multipleValLists = filter(lambda list_bool, len(list_bool) > 1,unique_booleans)
-
     # Transforming the list of rows into a columns string names and removing the "_1" from the name
     row_as_dictionary = map(lambda val: val[0].asDict(),single_bools_lists)
+
     only_trues_list = filter(lambda val:val.values()[0],row_as_dictionary)
     column_names = [dictRow.keys()[0].replace('_1','') for dictRow in only_trues_list]
 
@@ -58,6 +62,5 @@ if __name__ == "__main__":
     bqFinalSchema = [set_new_schema(key,val) for key,val in dict_schema.items()]
     columns = ["name","type","mode"]
     df = spark.createDataFrame(bqFinalSchema,columns)
-    output = ("results/schema.json")
     df.coalesce(1).write.mode("overwrite").save(output_path)
     spark.stop()

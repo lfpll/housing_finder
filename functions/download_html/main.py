@@ -65,8 +65,8 @@ def download_page(message, context):
         blob = bucket.blob(file_name)
         # Checking if file exists, meaning it was an URL recreated
         if blob.exists():
-            bucket = storage_client.get_bucket(_OUT_BUCKET)
-            blob = bucket.blob('update/{0}'.format(file_name))
+            bucket = storage_client.get_bucket(_JSON_BUCKET)
+            blob = bucket.blob('{0}'.format(file_name.replace('.html','.json')))
             blob.upload_from_string('')
         else:
             response = requests.get(url, headers=HEADERS)
