@@ -1,8 +1,10 @@
 import sys
+import subprocess
+import re
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf,coalesce,col,regexp_replace,split,trim,struct
-
 from pyspark.sql.types import *
+
 def get_number_columns(DF):
     """A function that receives a spark dataframe and 
         returns the columns that are strings and can be numbers
@@ -31,13 +33,26 @@ spark = SparkSession.builder.appName("treat_data").getOrCreate()
 
 input_path = sys.argv[1]
 out_path = sys.argv[2]
+output_dataset = sys.argv[3]
+output_table = sys.argv[4]
+
+
 
 df = spark.read.json(input_path)
+
+regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
+
+def remove_non_utf8(string):
+    return regexp_non_words.sub('',string)
+
+replace_utf8 = udf(remove_non_utf8)
 
 # First treat the data in strings removing starting spaces unused
 str_columns = [column_name for column_name,data_type in df.dtypes if data_type == 'string']
 for column in str_columns:
-    df = df.withColumn(column,regexp_replace(regexp_replace(column,"\s+"," "),"^[^\\p{L}\\p{N}]|[^\\p{L}\\p{N}]$","")) 
+    df = df.withColumn(column,remove_non_utf8(regexp_replace(column,r"\s+"," "))) 
+
+df.select('url').show(4)
 
 # Removing the square meter from the  area
 df = df.withColumn("area_util",regexp_replace("area_util","m2",""))
@@ -65,3 +80,11 @@ df = df.drop('latitude','longitude','quarto','vaga','suite','banheiro')
 df = df.withColumn("cidade",trim(split_col.getItem(1)))
 df = df.withColumn("bairro",trim(split_col.getItem(0)))
 df.coalesce(1).write.parquet(out_path)
+
+subprocess.check_call(
+    'bq load --source_format PARQUET '
+    '--replace '
+    '--autodetect '
+    '{dataset}.{table} {files}'.format(
+        dataset=output_dataset, table=output_table, files=out_path+'/part-*'
+    ).split())
