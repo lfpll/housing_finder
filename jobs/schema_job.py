@@ -48,7 +48,7 @@ if __name__ == "__main__":
     unique_booleans = [unique.distinct().collect() for unique in numbers_list]
 
     # Getting the ones that can only have one value -> (false or true) not [false,true]
-    single_bools_lists = filter(lambda list_bool: len(list_bool) <= 1,unique_booleans)
+    single_bools_lists = filter(lambda list_bool: (len(list_bool) <= 1 and list_bool[0]),unique_booleans)
 
     # Transforming the list of rows into a columns string names and removing the "_1" from the name
     row_as_dictionary = map(lambda val: val[0].asDict(),single_bools_lists)

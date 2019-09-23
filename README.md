@@ -29,7 +29,7 @@ This is a simple folder schema mostly for automatically CI\CD for google cloud.
 My first ambtion here is to have workflow from the imoevelweb website
 
 ### Version 1.0 
-1. Creating cloud functions with in a smart way (logging, error handling, as reusable as possible)
+1. Creating cloud functions with in a smart way (logging, error handling as reusable as possible)
 2. Creating a solution to bring the data from google cloud storage to bigquery
 3. Create a user simple interface for searching using bigquery as backend (easier and cheaper then cloud SQL)
 4. Create a automatically process that detects ulrs offline
