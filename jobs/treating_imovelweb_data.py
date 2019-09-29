@@ -15,7 +15,7 @@ def get_number_columns(DF):
     """
     dict_schema = {key:val for key,val in DF.dtypes}
     json_schema = [col_name for col_name,dtype in dict_schema.items() if dtype == 'string']
-    # Return a list of booleans for each row to check if can be casted to float (Integer types are the same price as float on bigquery)
+    # Return a list of booleans for each row to  check if can be casted to float (Integer types are the same price as float on bigquery)
     numbers_list =  [DF.select(col,col(col).cast("float").isNotNull().
                         alias(col+"_1")).dropna().select(col+"_1") for col in json_schema]
     # Getting the unique values of the bolleans
@@ -36,8 +36,6 @@ out_path = sys.argv[2]
 output_dataset = sys.argv[3]
 output_table = sys.argv[4]
 
-
-
 df = spark.read.json(input_path)
 
 regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
@@ -45,14 +43,12 @@ regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
 def remove_non_utf8(string):
     return regexp_non_words.sub('',string)
 
-replace_utf8 = udf(remove_non_utf8)
+# replace_utf8 = udf(remove_non_utf8)
 
 # First treat the data in strings removing starting spaces unused
 str_columns = [column_name for column_name,data_type in df.dtypes if data_type == 'string']
 for column in str_columns:
-    df = df.withColumn(column,remove_non_utf8(regexp_replace(column,r"\s+"," "))) 
-
-df.select('url').show(4)
+    df = df.withColumn(column,regexp_replace(remove_non_utf8(column),r"\s+"," "))
 
 # Removing the square meter from the  area
 df = df.withColumn("area_util",regexp_replace("area_util","m2",""))
@@ -79,7 +75,7 @@ split_col = split(df['bairro'], ',')
 df = df.drop('latitude','longitude','quarto','vaga','suite','banheiro')
 df = df.withColumn("cidade",trim(split_col.getItem(1)))
 df = df.withColumn("bairro",trim(split_col.getItem(0)))
-df.coalesce(1).write.parquet(out_path)
+df.coalesce(1).write.option("codec", "org.apache.hadoop.io.compress.GzipCodec").parquet(out_path)
 
 subprocess.check_call(
     'bq load --source_format PARQUET '
