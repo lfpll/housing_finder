@@ -6,9 +6,16 @@ import pytest
 from google.cloud import pubsub_v1, logging
 
 PARENT_PATH = os.path.abspath(os.path.join(dirname(__file__), os.pardir))
-SAMPLES_FOLDER = PARENT_PATH + '/samples/'
+SAMPLES_FOLDER = PARENT_PATH + '/tests/samples/'
 sys.path.append(PARENT_PATH)
 
+@pytest.fixture()
+def current_folder():
+    return PARENT_PATH
+
+@pytest.fixture()
+def sample_folder():
+    return SAMPLES_FOLDER
 @pytest.fixture(autouse=True)
 def mock_cloud_logging(monkeypatch):
 
