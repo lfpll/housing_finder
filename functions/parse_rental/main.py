@@ -127,7 +127,7 @@ def parse_propertie_page(data, context):
 
         # Block of latitude and longitude
         if len(local_block) == 1 or filter_scripts:
-
+            lat_long = False
             if filter_scripts:
                 lat_long_script = filter_scripts[0].text
                 lat_long = list(filter(lambda val: REGEXP_CORDINATES.search(
@@ -139,15 +139,15 @@ def parse_propertie_page(data, context):
                         ':')), lat_long))
                 lat_long = [tuple((key, float(val))) for key, val in lat_long]
             else:
-                image_url = local_block[0].find('img')
+                image_url = local_block[0].find('img').text
                 if REGEXP_MARKERS.search(image_url):
                     url_parse = REGEXP_MARKERS.search(
                         image_url['src']).group(1).split(',')
                     lat_long = [float(float_val) for float_val in url_parse]
                     lat_long = [('latitude', float(lat_long[0].replace(',', ''))), float(
                         'longitute', lat_long[1].replace(',', ''))]
-
-            final_tups.extend(lat_long)
+            if lat_long:
+                final_tups.extend(lat_long)
 
         # Publisher info
         if pub_code:
@@ -172,9 +172,13 @@ def parse_propertie_page(data, context):
 
         json_file = json.dumps({unidecode.unidecode(key).strip().replace(
             ' ', '_').lower(): val for key, val in final_tups})
+        
         bucket = client.get_bucket(_OUT_BUCKET)
+        folder = 'stage'
+        if not json_obj['new_blob']: 
+            folder = 'update_stage'
         new_blob = bucket.blob(
-            'stage/{hex_name}.json'.format(hex_name=file_path.replace('.html', '')))
+                '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
 
     except Exception:

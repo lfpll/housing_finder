@@ -95,14 +95,14 @@ def download_page(message, context):
                 # Saving the html by the url name
 
                 pub_obj_encoded = json.dumps(
-                    {'file_path': file_name, 'url': url}).encode("utf-8")
+                    {'file_path': file_name, 'url': url,'new_blob':new_blob}).encode("utf-8")
 
                 # Storing the blob
                 blob.upload_from_string(response.content)
 
                 # Publish path to be parsed and transformed to json if new
-                if new_blob:
-                    publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
+                
+                publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception:
         error_client = error_reporting.Client()
         error_client.report_exception()
