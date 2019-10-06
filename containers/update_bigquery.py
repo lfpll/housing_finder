@@ -1,7 +1,8 @@
 import os
-from google.cloud import bigquery
+from google.cloud import bigquery,storage
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 import time
 
 
@@ -22,10 +23,10 @@ def url_exists_imoveisweb(response):
         return True
 
 
-class Check_Online_Urls:
+class Check_Live_Urls:
 
     def __init__(self, dataset='newdata', table='rentaldata',
-                 function_check_deleted=url_exists_imoveisweb, sleep_time=2):
+                 function_check_deleted=url_exists_imoveisweb, sleep_time=1):
         # Function that checks if requests.response object was deleted
         self.check_deleted = function_check_deleted
         self.client = bigquery.Client()
@@ -34,15 +35,8 @@ class Check_Online_Urls:
 
         self.sleep_time = sleep_time
 
-        # Passing parameterers to be less side effecty
-        self.urls_list = self.get_urls_bigquery(
-            dataset=self.dataset, table=self.table)
 
-        # Getting the urls that do not exist
-        self.deleted_urls = self.check_deleted(urls_list=self.urls_list,
-                                               wvalidation_function=self.check_deleted)
-
-    def get_urls_bigquery(self, dataset, table, url_columns='url'):
+    def get_urls_bigquery(self, dataset, table, url_column='url'):
         """Function that returns the urls from the column in bigquery
 
         Args:
@@ -55,13 +49,12 @@ class Check_Online_Urls:
         """
         table_ref = self.client.dataset(dataset).table(table)
         table = self.client.get_table(table_ref)
-        field_url = [bigquery.schema.SchemaField(
-            'url', 'STRING', 'NULLABLE', None, ())]
+        field_url = [bigquery.schema.SchemaField(url_column, 'STRING', 'NULLABLE', None, ())]
         # Return the list of urls from the url colum
         rows_list = self.client.list_rows(table, selected_fields=field_url)
         return rows_list
 
-    def check_not_working_urls(self, urls_list, validation_function):
+    def check_not_working_urls(self, urls_list, validation_function=None):
         """A function that check urls offline based on a function
 
         Args:
@@ -70,12 +63,20 @@ class Check_Online_Urls:
         Returns:
             [type]: [description]
         """
+        if validation_function is None:
+            validation_function = self.check_deleted
         delete_urls = []
+        
         for url in urls_list:
             response = requests.get(url)
-            if validation_function(response):
+            if not validation_function(response):
                 delete_urls.append(url)
+        time.sleep(self.sleep_time)
         return delete_urls
 
-    def output_to_json(self, offline_list):
-        pass
+    def output_to_json(self, offline_list,json_bucket):
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(json_bucket)
+        date_today = str(datetime.now())
+        blob = bucket.blob('delete/{0}'.format(date_today))
+
