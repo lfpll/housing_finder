@@ -31,11 +31,13 @@ _PARSE_FUNCTION_TOPIC = os.environ["PARSE_TOPIC"]
 def download_page(message, context):
     """Receives a message object from pubsub, on the key 'data' it retrieves an url
         Download this url into the _IN_BUCKET or republish if it fails
+        If same name let the gcloud trigger update handle
 
     Arguments:
             data {[base64 encoded string]} -- object json encoded with data:{file_path}
             context {[object]} -- [description]
     """
+
     def __error_path(publisher, pub_obj_encoded, tries, url, error):
         """Function to handle possible errors on pagination
 
@@ -50,59 +52,55 @@ def download_page(message, context):
             raise Exception(
                 "%s was already parsed 5 times, ended with %s page"%(url, error))
     try:
-        # Getting the url to be paginated        
+        # Getting the url of the pagination page      
         data = base64.b64decode(message['data']).decode('utf-8')
         json_decoded = json.loads(data)
         url = json_decoded['url']
         
         # Out file name to gsbucket
         file_name = url.split('/')[-1]
-
         storage_client = storage.Client()
-    
-        
         bucket = storage_client.get_bucket(_OUT_BUCKET)
         blob = bucket.blob(file_name)
-        # Checking if file exists, meaning it was an URL recreated
-        if blob.exists():
-            bucket = storage_client.get_bucket(_JSON_BUCKET)
-            blob = bucket.blob('{0}'.format(file_name.replace('.html','.json')))
-            blob.upload_from_string('')
+        
+        # If blob exists let gcloud trigger update handle
+        new_blob = False
+        if not blob.exists():
+            new_blob = True
+
+        response = requests.get(url, headers=HEADERS)
+        publisher = pubsub_v1.PublisherClient()
+
+        # Adding number o tries
+        tries = 0
+        if 'tries' in json_decoded:
+            tries = int(json_decoded['tries']) + 1
+
+        # Object for failure maximum of tries
+        pub_obj_encoded = json.dumps({'url': url, 'tries': tries}).encode("utf-8")
+
+        # If the status is not 200 the requestor was blocked send back
+        if response.status_code != 200:
+            __error_path(publisher,pub_obj_encoded,tries,url,error=response.status_code)
         else:
-            response = requests.get(url, headers=HEADERS)
-            publisher = pubsub_v1.PublisherClient()
+            soup = BeautifulSoup(response.text, 'lxml')
 
-            # Adding number o tries
-            tries = 0
-            if 'tries' in json_decoded:
-                tries = int(json_decoded['tries']) + 1
-
-            # Object for failture
-            pub_obj_encoded = json.dumps({'url': url, 'tries': tries}).encode("utf-8")
-
-            # If the status is not 200 the requestor was blocked send back
-            if response.status_code != 200:
-                __error_path(publisher,pub_obj_encoded,tries,url,error=response.status_code)
+            # Special case where this website bad implemented http errors
+            if soup.select('title')[0].text == 'Error 500':
+                __error_path(publisher,pub_obj_encoded,tries,url,error=500)
+                publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
             else:
+                # Saving the html by the url name
                 
-                soup = BeautifulSoup(response.text, 'lxml')
+                pub_obj_encoded = json.dumps(
+                    {'file_path': file_name, 'url': url}).encode("utf-8")
 
-                # Special case where this website bad implemented http errors
-                if soup.select('title')[0].text == 'Error 500':
-                    __error_path(publisher,pub_obj_encoded,tries,url,error=500)
-                    publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
-                else:
-                    # Saving the html by the url name
-                    
-                    pub_obj_encoded = json.dumps(
-                        {'file_path': file_name, 'url': url}).encode("utf-8")
+                # Storing the blob
+                blob.upload_from_string(response.content)
 
-                    # Opening the bucket connection
-                    
-                    blob.upload_from_string(response.content)
-
-                    # Publish path to be parsed and transformed to json
+                # Publish path to be parsed and transformed to json if new
+                if new_blob:
                     publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception:
-        error_client = error_reporting.Client()
-        error_client.report_exception()
+            error_client = error_reporting.Client()
+            error_client.report_exception()
