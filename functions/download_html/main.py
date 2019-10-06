@@ -1,19 +1,19 @@
 import base64
 import json
 import os
-from google.cloud import storage, pubsub_v1, error_reporting, logging as cloud_logging
 import logging
+from google.cloud import storage, pubsub_v1, error_reporting, logging as cloud_logging
+
 from bs4 import BeautifulSoup
 import requests
 
 
-
 # Instantiating log client
 LOG_CLIENT = cloud_logging.Client()
-handler = LOG_CLIENT.get_default_handler()
+HANDLER = LOG_CLIENT.get_default_handler()
 LOGGER = logging.getLogger('cloudLogger')
 LOGGER.setLevel(logging.INFO)
-LOGGER.addHandler(handler)
+LOGGER.addHandler(HANDLER)
 
 
 HEADERS = {
@@ -50,19 +50,19 @@ def download_page(message, context):
             publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
         else:
             raise Exception(
-                "%s was already parsed 5 times, ended with %s page"%(url, error))
+                "%s was already parsed 5 times, ended with %s page" % (url, error))
     try:
-        # Getting the url of the pagination page      
+        # Getting the url of the pagination page
         data = base64.b64decode(message['data']).decode('utf-8')
         json_decoded = json.loads(data)
         url = json_decoded['url']
-        
+
         # Out file name to gsbucket
         file_name = url.split('/')[-1]
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(_OUT_BUCKET)
         blob = bucket.blob(file_name)
-        
+
         # If blob exists let gcloud trigger update handle
         new_blob = False
         if not blob.exists():
@@ -77,21 +77,23 @@ def download_page(message, context):
             tries = int(json_decoded['tries']) + 1
 
         # Object for failure maximum of tries
-        pub_obj_encoded = json.dumps({'url': url, 'tries': tries}).encode("utf-8")
+        pub_obj_encoded = json.dumps(
+            {'url': url, 'tries': tries}).encode("utf-8")
 
         # If the status is not 200 the requestor was blocked send back
         if response.status_code != 200:
-            __error_path(publisher,pub_obj_encoded,tries,url,error=response.status_code)
+            __error_path(publisher, pub_obj_encoded, tries,
+                         url, error=response.status_code)
         else:
             soup = BeautifulSoup(response.text, 'lxml')
 
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':
-                __error_path(publisher,pub_obj_encoded,tries,url,error=500)
+                __error_path(publisher, pub_obj_encoded, tries, url, error=500)
                 publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
             else:
                 # Saving the html by the url name
-                
+
                 pub_obj_encoded = json.dumps(
                     {'file_path': file_name, 'url': url}).encode("utf-8")
 
@@ -102,5 +104,5 @@ def download_page(message, context):
                 if new_blob:
                     publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception:
-            error_client = error_reporting.Client()
-            error_client.report_exception()
+        error_client = error_reporting.Client()
+        error_client.report_exception()

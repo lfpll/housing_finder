@@ -12,10 +12,10 @@ HEADERS = {
 
 # Instantiating log client
 LOG_CLIENT = cloud_logging.Client()
-handler = LOG_CLIENT.get_default_handler()
+HANDLER = LOG_CLIENT.get_default_handler()
 LOGGER = logging.getLogger('cloudLogger')
 LOGGER.setLevel(logging.INFO)
-LOGGER.addHandler(handler)
+LOGGER.addHandler(HANDLER)
 
 # Variables to make pagination works
 # 'projects/educare-226818/topics/child_scrape'
@@ -53,7 +53,7 @@ def parse_and_paginate(message, context):
         else:
             logging.error(
                 "%s pagination already parsed 5 times, ended with %s page", url, error)
-    
+
     data = base64.b64decode(message['data']).decode('utf-8')
     json_decoded = json.loads(data)
     url_decode = json_decoded['url']
@@ -70,11 +70,10 @@ def parse_and_paginate(message, context):
     pub_obj_encoded = json.dumps(
         {'url': url_decode, 'tries': tries}).encode("utf-8")
 
-    response = requests.get(url_decode,headers=HEADERS)
+    response = requests.get(url_decode, headers=HEADERS)
     if response.status_code == 200:
 
         soup = BeautifulSoup(response.content, 'lxml')
-
 
         # If the request has error page 500 follow error path
         if soup.select('title')[0].text == 'Error 500':
@@ -86,8 +85,9 @@ def parse_and_paginate(message, context):
             if next_url:
                 # Loging if there is no next url and publish
                 next_url = next_url[0].select('a')[0]['href']
-                pub_next_obj = json.dumps({"url":_BASE_URL + next_url})
-                publisher.publish(_THIS_FUNCTION_TOPIC,pub_next_obj.encode('utf-8'))
+                pub_next_obj = json.dumps({"url": _BASE_URL + next_url})
+                publisher.publish(_THIS_FUNCTION_TOPIC,
+                                  pub_next_obj.encode('utf-8'))
             else:
                 logging.info("Last url %s", url_decode)
 
@@ -100,8 +100,9 @@ def parse_and_paginate(message, context):
 
             # Publishing urls to the products topic
             for product in products_url:
-                product_obj = json.dumps({"url":product})
-                publisher.publish(_DOWNLOAD_HTML_TOPIC, product_obj.encode('utf-8'))
+                product_obj = json.dumps({"url": product})
+                publisher.publish(_DOWNLOAD_HTML_TOPIC,
+                                  product_obj.encode('utf-8'))
     else:
         __error_path(publisher, pub_obj_encoded, tries,
                      url_decode, error=response.status_code)

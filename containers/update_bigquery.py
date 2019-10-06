@@ -1,9 +1,9 @@
-import os
-from google.cloud import bigquery,storage
-import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 import time
+import json
+import requests
+from bs4 import BeautifulSoup
+from google.cloud import bigquery, storage
 
 
 def url_exists_imoveisweb(response):
@@ -19,8 +19,7 @@ def url_exists_imoveisweb(response):
     soup = BeautifulSoup(response.content, 'lxml')
     if soup.select('title')[0].text == 'Error 500':
         return False
-    else:
-        return True
+    return True
 
 
 class Check_Live_Urls:
@@ -35,7 +34,6 @@ class Check_Live_Urls:
 
         self.sleep_time = sleep_time
 
-
     def get_urls_bigquery(self, dataset, table, url_column='url'):
         """Function that returns the urls from the column in bigquery
 
@@ -49,7 +47,8 @@ class Check_Live_Urls:
         """
         table_ref = self.client.dataset(dataset).table(table)
         table = self.client.get_table(table_ref)
-        field_url = [bigquery.schema.SchemaField(url_column, 'STRING', 'NULLABLE', None, ())]
+        field_url = [bigquery.schema.SchemaField(
+            url_column, 'STRING', 'NULLABLE', None, ())]
         # Return the list of urls from the url colum
         rows_list = self.client.list_rows(table, selected_fields=field_url)
         return rows_list
@@ -66,7 +65,7 @@ class Check_Live_Urls:
         if validation_function is None:
             validation_function = self.check_deleted
         delete_urls = []
-        
+
         for url in urls_list:
             response = requests.get(url)
             if not validation_function(response):
@@ -74,9 +73,10 @@ class Check_Live_Urls:
         time.sleep(self.sleep_time)
         return delete_urls
 
-    def output_to_json(self, offline_list,json_bucket):
+    def output_to_json(self, offline_list, json_bucket):
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(json_bucket)
         date_today = str(datetime.now())
         blob = bucket.blob('delete/{0}'.format(date_today))
-
+        json_file = json.dumps({'delete': offline_list})
+        blob.upload_from_string(json_file)
