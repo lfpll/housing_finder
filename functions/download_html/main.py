@@ -58,11 +58,12 @@ def download_page(message, context):
         url = json_decoded['url']
 
         # Out file name to gsbucket
-        file_name = url.split('/')[-1]
+        file_name = url.split('/')[-1].replace('.','_').replace(':','_').replace(';','_')
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(_OUT_BUCKET)
         blob = bucket.blob(file_name)
-
+        blob.metadata = blob.metadata or {}
+        blob.metadata['url'] = url
         # If blob exists let gcloud trigger update handle
         new_blob = False
         if not blob.exists():
