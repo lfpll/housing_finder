@@ -51,5 +51,4 @@ class TestClass:
         # List dead urls
         all_urls = [val[0] for val in all_urls]
         dead_urls = validate_instance.check_not_working_urls(urls_list=all_urls)
-        
         assert error_page + error_status_code == len(dead_urls)

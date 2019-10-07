@@ -44,3 +44,16 @@ class Mock_Client_BigQuery:
 
     def get_table(self,table):
         return self.table
+
+class Mock_Blob:
+    
+    def __init__(self):
+        self.bucket = ''
+
+class Mock_Bucket:
+    
+    def __init__(self, bucket):
+        self.bucket = bucket
+    
+    def get_bucket(self,bucket_name):
+        print(bucket_name)
