@@ -33,10 +33,9 @@ spark = SparkSession.builder.appName("treat_data").getOrCreate()
 
 input_path = sys.argv[1]
 out_path = sys.argv[2]
-output_dataset = sys.argv[3]
-output_table = sys.argv[4]
 
-df = spark.read.json(input_path)
+
+df = spark.read.json((spark.read.text(input_path).repartition(1000).rdd))
 
 regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
 
@@ -77,10 +76,3 @@ df = df.withColumn("cidade",trim(split_col.getItem(1)))
 df = df.withColumn("bairro",trim(split_col.getItem(0)))
 df.coalesce(1).write.option("codec", "org.apache.hadoop.io.compress.GzipCodec").parquet(out_path)
 
-subprocess.check_call(
-    'bq load --source_format PARQUET '
-    '--replace '
-    '--autodetect '
-    '{dataset}.{table} {files}'.format(
-        dataset=output_dataset, table=output_table, files=out_path+'/part-*'
-    ).split())

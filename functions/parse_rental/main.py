@@ -42,7 +42,7 @@ def parse_propertie_page(data, context):
 
         file_path = json_obj['file_path']
         url = json_obj['url']
-        blob = bucket.blob(file_path)
+        blob = bucket.blob(file_path.replace(':','_').replace('.','_'))
         html_data = blob.download_as_string()
         soup = BeautifulSoup(html_data, 'lxml')
 

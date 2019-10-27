@@ -3,11 +3,10 @@ import os
 from pyspark.sql import SparkSession,functions as F
 from pyspark.sql.types import BooleanType
 
-# Storage to be read with json files
-_INPUT_FOLDER = os.environ['IN_FOLDER']
 
-# Out file with schema
-_OUT_FILE_PATH = os.environ['OUT_FILE_PATH']
+
+input_path = sys.argv[1]
+output_path = sys.argv[2]
 
 # THIS IS A BAD JOB, I'm using because it's for an small project and runned once
 def set_new_schema(name,type_name):
@@ -32,11 +31,10 @@ def set_new_schema(name,type_name):
     return bq_schema
 
 if __name__ == "__main__":
-    input_path = _INPUT_FOLDER
-    output_path = _OUT_FILE_PATH
+
     spark = SparkSession.builder.getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
-    jsonDF = spark.read.json(input_path)
+    jsonDF = spark.read.json((spark.read.text(input_path).repartition(1000).rdd))
     dict_schema = {key:val for key,val in jsonDF.dtypes}
     json_schema = [col_name for col_name,dtype in dict_schema.items() if dtype == 'string']
 
@@ -63,5 +61,5 @@ if __name__ == "__main__":
     bqFinalSchema = [set_new_schema(key,val) for key,val in dict_schema.items()]
     columns = ["name","type","mode"]
     df = spark.createDataFrame(bqFinalSchema,columns)
-    df.coalesce(1).write.mode("overwrite").save(output_path)
+    df.coalesce(1).write.mode("overwrite").json(output_path)
     spark.stop()
