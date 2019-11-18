@@ -31,7 +31,6 @@ class Check_Live_Urls:
         self.client = bigquery.Client()
         self.dataset = dataset
         self.table = table
-
         self.sleep_time = sleep_time
 
     def get_urls_bigquery(self, dataset, table, url_column='url'):
@@ -62,6 +61,7 @@ class Check_Live_Urls:
         Returns:
             [type]: [description]
         """
+        # Getting the function that checks if the url was deleted
         if validation_function is None:
             validation_function = self.check_deleted
         delete_urls = []
@@ -80,3 +80,12 @@ class Check_Live_Urls:
         blob = bucket.blob('delete/{0}'.format(date_today))
         json_file = json.dumps({'delete': offline_list})
         blob.upload_from_string(json_file)
+
+if "__name__" == __main__:
+    parser = argparse.ArgumentParser(description='Arguments of table and dataset')
+    parser.add_argument('--dataset', type=str,
+                    help='Path of output of the dataframe', required=True)
+    parser.add_argument('--table', type=str,
+                    help='Path of output of the dataframe', required=True)
+    bq_args = parser_outside.parse_known_args()
+    check_urls = Check_Live_Urls(data_set=bq_args.dataset,table=bq_args.table)
