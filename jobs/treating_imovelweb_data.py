@@ -39,40 +39,45 @@ df = spark.read.json((spark.read.text(input_path).repartition(1000).rdd))
 
 regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
 
-def remove_non_utf8(string):
+# Remove spaces without afecting accent words
+def strip_with_utf8(string):
     return regexp_non_words.sub('',string)
 
-# replace_utf8 = udf(remove_non_utf8)
+# replace_utf8 = udf(strip_with_utf8)
 
 # First treat the data in strings removing starting spaces unused
 str_columns = [column_name for column_name,data_type in df.dtypes if data_type == 'string']
 for column in str_columns:
-    df = df.withColumn(column,regexp_replace(remove_non_utf8(column),r"\s+"," "))
+    df = df.withColumn(column,regexp_replace(strip_with_utf8(column),r"\s+"," "))
 
 # Removing the square meter from the  area
 df = df.withColumn("area_util",regexp_replace("area_util","m2",""))
 df = df.withColumn("area_total",regexp_replace("area_total","m2",""))
 
-# Transforming the latitue and longitue into one tuple
+# Transforming the latitude and longitude into one tuple
 df = df.withColumn("geopoint",struct("latitude","longitude"))
 
 
-# Treating the publication date and transformi
-# ng into an integer 
+# Treating the publication date and transforming into an integer 
 def replace_pub_data(prefix):
     return prefix.lower().replace('hoje','0').replace('ontem','1')
 
 replace_udf = udf(replace_pub_data)
 df = df.withColumn("pub_data",regexp_replace(replace_udf("pub_data"),"[^0-9]",""))
 
+# Joining some columns with others that mean the same
 df = df.withColumn("banheiros",coalesce("banheiros","banheiro"))
 df = df.withColumn("vagas",coalesce("vaga","vagas"))
 df = df.withColumn("suites",coalesce("suites","suite"))
 df = df.withColumn("quartos",coalesce("quarto","quartos"))
 
 split_col = split(df['bairro'], ',')
+# Cleaning the table
 df = df.drop('latitude','longitude','quarto','vaga','suite','banheiro')
+
+# Adding some more values
 df = df.withColumn("cidade",trim(split_col.getItem(1)))
 df = df.withColumn("bairro",trim(split_col.getItem(0)))
+
 df.coalesce(1).write.option("codec", "org.apache.hadoop.io.compress.GzipCodec").parquet(out_path)
 
