@@ -1,13 +1,14 @@
 import pandas as pd
 import requests
 import pytest
+import os
+import json
 from containers.update_bigquery import Check_Live_Urls
 # This is a test that removes a function from a sql lite like database based on a url column that is offlinee
 # Mock database with an url
 # Create a SQL lite database
 # Populate with fake data
 # Create a function that maps the bad urls to requests
-# Mock function of schema
 
 # Mock database deletion
 
@@ -45,10 +46,18 @@ class TestClass:
         validate_instance = Check_Live_Urls(table_name, dataset)
         all_urls = validate_instance.get_urls_bigquery(table=table_name,
                                                     dataset=dataset, url_column='url')
-
+        # Comparing the size of the urls and the dataframe mocked
         assert df_size == len(all_urls)
 
         # List dead urls
         all_urls = [val[0] for val in all_urls]
         dead_urls = validate_instance.check_not_working_urls(urls_list=all_urls)
         assert error_page + error_status_code == len(dead_urls)
+
+        # Check if blob is stored and with the same length
+        file_name = "mock_path.json"
+        validate_instance.store_data(file_name)
+        file_path = "%s//tmp//%s"%(os.getcwd(), file_name)
+        assert os.path.exists(file_path)
+        with open(file_path) as json_file:
+            assert error_page + error_status_code == len(json.load(json_file)['deleted'])
