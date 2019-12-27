@@ -88,7 +88,7 @@ if __name__== "__main__":
                     help='Path of output of the dataframe', default='newdata')
     parser.add_argument('--table', type=str,
                     help='Path of output of the dataframe', default='rentaldata')
-    bq_args = vars(parser.parse_known_args())
+    bq_args = vars(parser.parse_known_args()[0])
     check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])
     urls_list = check_urls.get_urls_bigquery()
     offline_urls = check_urls.check_not_working_urls(urls_list)
