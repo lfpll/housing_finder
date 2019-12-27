@@ -18,7 +18,7 @@ def url_exists_imoveis_web(response):
         return False
     # Special case of bad status_code system
     soup = BeautifulSoup(response.content, 'lxml')
-    if soup.find('title')[0].text == 'Error 500' or soup.find("p",string="Anúncio finalizado"):
+    if soup.find('title').text == 'Error 500' or soup.find("p",string="Anúncio finalizado"):
         return False
     return True
 
@@ -94,8 +94,9 @@ if __name__== "__main__":
                     help='Path of output of the dataframe', default='newdata')
     parser.add_argument('--table', type=str,
                     help='Path of output of the dataframe', default='rentaldata')
-    bq_args = vars(parser.parse_known_args())
+    bq_args = vars(parser.parse_known_args()[0])
     check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])
     urls_list = check_urls.get_urls_bigquery()
-    offline_urls = check_urls.check_not_working_urls(urls_list)
+    only_urls = (url[0] for url in urls_list)
+    offline_urls = check_urls.check_not_working_urls(only_urls)
     check_urls.store_data_gcs(offline_list=offline_urls,json_bucket='tmp-delete')
