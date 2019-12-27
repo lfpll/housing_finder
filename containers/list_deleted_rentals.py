@@ -18,7 +18,7 @@ def url_exists_imoveisweb(response):
         return False
     # Special case of bad status_code system
     soup = BeautifulSoup(response.content, 'lxml')
-    if soup.select('title')[0].text == 'Error 500':
+    if soup.find('title')[0].text == 'Error 500' or soup.find("p",string="Anúncio finalizado"):
         return False
     return True
 
