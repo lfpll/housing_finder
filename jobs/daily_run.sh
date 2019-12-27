@@ -4,7 +4,6 @@ output_path="gs://imoveis-data-json/out/"
 dataset="newdata"
 table="rentaldata"
 
-
 # Treading the data with spark
 gcloud dataproc clusters create dumdataproc --region us-central1 --num-workers 2 --worker-machine-type custom-2-5120
 gcloud dataproc jobs submit pyspark --cluster dumdataproc schema_job.py $input_path

@@ -44,3 +44,30 @@ class Mock_Client_BigQuery:
 
     def get_table(self,table):
         return self.table
+
+class Mock_blob:
+    def __init__(self, blob_path):
+        self.blob_path = blob_path
+
+    def upload_from_string(self,text):
+        with open(self.blob_path, 'w') as mock_file:
+            mock_file.write(text)
+
+class Mock_bucket:
+    def __init__(self, bucket):
+        self.bucket_name = bucket
+        self.bucket_path = os.getcwd() + "/tmp/%s/"%(self.bucket_name)
+        self.__mock_folder()
+
+    # Creating a temp folder to mock the bucket
+    def __mock_folder(self,path=None):
+        os.makedirs(self.bucket_path,exist_ok=True)
+    def blob(self,path):
+        return Mock_blob(self.bucket_path+path)
+
+class Mock_storage_client:
+    def __init__(self):
+        pass
+                
+    def get_bucket(self,bucket):
+        return Mock_bucket(bucket)
