@@ -4,6 +4,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from google.cloud import bigquery, storage
+import argparse
 
 
 def url_exists_imoveisweb(response):
@@ -73,19 +74,19 @@ class Check_Live_Urls:
         time.sleep(self.sleep_time)
         return delete_urls
 
-    def output_to_json(self, offline_list, json_bucket):
+    def store_data_gcs(self, offline_list, json_bucket):
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(json_bucket)
-        date_today = str(datetime.now())
-        blob = bucket.blob('delete/{0}'.format(date_today))
+        date_today = str(datetime.now().date()).replace(' ','_')
+        blob = bucket.blob('{0}'.format(date_today))
         json_file = json.dumps({'delete': offline_list})
         blob.upload_from_string(json_file)
 
-if "__name__" == __main__:
+if __name__== "__main__":
     parser = argparse.ArgumentParser(description='Arguments of table and dataset')
     parser.add_argument('--dataset', type=str,
                     help='Path of output of the dataframe', required=True)
     parser.add_argument('--table', type=str,
                     help='Path of output of the dataframe', required=True)
-    bq_args = parser_outside.parse_known_args()
-    check_urls = Check_Live_Urls(data_set=bq_args.dataset,table=bq_args.table)
+    bq_args = vars(parser.parse_known_args())
+    check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])

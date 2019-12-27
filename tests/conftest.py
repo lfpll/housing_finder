@@ -3,10 +3,11 @@ import os
 from os.path import dirname
 import requests
 import pytest
-from google.cloud import pubsub_v1, logging
-from mock_dbs import Mock_Sql_conn,Mock_Client_BigQuery
+from unittest.mock import MagicMock
+from mock_dbs import Mock_Sql_conn,Mock_Client_BigQuery, Mock_storage_client
+from google.cloud import pubsub_v1, logging, storage
 from unittest.mock import patch
-from google.cloud import bigquery
+from google.cloud import client, bigquery
 
 PARENT_PATH = os.path.abspath(os.path.join(dirname(__file__), os.pardir))
 SAMPLES_FOLDER = PARENT_PATH + '/tests/samples/'
@@ -59,14 +60,26 @@ def mock_request_200(monkeypatch,sample_folder):
         return response_mock
     monkeypatch.setattr(requests, 'get', get_200_replacer)
 
-@pytest.mark.bq_test
-@pytest.fixture()
-def mock_bigquery_client(monkeypatch,sample_folder):
+@pytest.fixture(autouse=True)
+def mock_bigquery_client(monkeypatch, sample_folder):
     mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
     mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.parquet')
-    mock_class = Mock_Client_BigQuery(mock_sql)
-    init = lambda self:  None
-    monkeypatch.delattr(bigquery.Client,'__init__',init)
-    monkeypatch.setattr(bigquery.Client,'list_rows',mock_class.list_rows)
-    monkeypatch.setattr(bigquery.Client,'get_table',mock_class.get_table)
+    mock_bq = Mock_Client_BigQuery(mock_sql)
+    def init(*args):
+        return None
+
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_table.table.return_value = None
+    mock_client.return_value = mock_table
+    monkeypatch.setattr(bigquery.Client,'dataset',mock_client)
+    monkeypatch.setattr(bigquery.Client,'__init__',init)
+    monkeypatch.setattr(bigquery.Client,'list_rows',mock_bq.list_rows)
+    monkeypatch.setattr(bigquery.Client,'get_table',mock_bq.get_table)
+    monkeypatch.setattr(storage,'Client',Mock_storage_client)
+
+@pytest.fixture()
+@pytest.mark.storage
+def mock_storage_client(monkeypatch):
+    monkeypatch.setattr(storage,'Client',Mock_storage_client)
 
