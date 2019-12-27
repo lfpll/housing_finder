@@ -85,9 +85,9 @@ class Check_Live_Urls:
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description='Arguments of table and dataset')
     parser.add_argument('--dataset', type=str,
-                    help='Path of output of the dataframe', required=True)
+                    help='Path of output of the dataframe', default='newdata')
     parser.add_argument('--table', type=str,
-                    help='Path of output of the dataframe', required=True)
+                    help='Path of output of the dataframe', default='rentaldata')
     bq_args = vars(parser.parse_known_args())
     check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])
     urls_list = check_urls.get_urls_bigquery()
