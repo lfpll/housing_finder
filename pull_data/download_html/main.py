@@ -89,7 +89,7 @@ def download_page(message, context):
             soup = BeautifulSoup(response.text, 'lxml')
 
             # Special case where this website bad implemented http errors
-            if soup.select('title')[0].text == 'Error 500':
+            if soup.select('title')[0].text != 'Error 500':
                 __error_path(publisher, pub_obj_encoded, tries, url, error=500)
                 publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
             else:

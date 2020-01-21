@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import logging
 from bs4 import BeautifulSoup
-from google.cloud import pubsub_v1, logging as cloud_logging
+from google.cloud import pubsub_v1,error_reporting , logging as cloud_logging
 import requests
 
 HEADERS = {
@@ -18,15 +18,11 @@ LOGGER.setLevel(logging.INFO)
 LOGGER.addHandler(HANDLER)
 
 # Variables to make pagination works
-# 'projects/educare-226818/topics/child_scrape'
-_THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]
-# 'projects/educare-226818/topics/html_path'
-_DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]
-# father_url = "https://www.imovelweb.com.br"
-_BASE_URL = os.environ['BASE_URL']
-# 'li.pag-go-next'
-_PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR']
-_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  # 'a.go-to-posting
+_THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"] # 'projects/educare-226818/topics/child_scrape'
+_DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"] # 'projects/educare-226818/topics/html_path'
+_BASE_URL = os.environ['BASE_URL'] # father_url = "https://www.imovelweb.com.br"
+_PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR'] # 'li.pag-go-next'
+_CHILD_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  # 'a.go-to-posting
 
 
 def parse_and_paginate(message, context):
@@ -34,10 +30,10 @@ def parse_and_paginate(message, context):
 
     Arguments:
         data {[base64.encoded]} -- object of pubsub with hashed url on data['data']
-        context {[type]} -- context of the pubsub element
+        context {[]} -- context of the pubsub element
 
     Raises:
-        Exception: [Error, page nas no places to rent]
+        Exception: [Error, page is invalid or has no data]
     """
 
     def __error_path(publisher, pub_obj_encoded, tries, url, error):
@@ -51,7 +47,7 @@ def parse_and_paginate(message, context):
         if tries < 5:
             publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
         else:
-            logging.error(
+            raise Exception(
                 "%s pagination already parsed 5 times, ended with %s page", url, error)
 
     data = base64.b64decode(message['data']).decode('utf-8')
@@ -71,8 +67,8 @@ def parse_and_paginate(message, context):
         {'url': url_decode, 'tries': tries}).encode("utf-8")
 
     response = requests.get(url_decode, headers=HEADERS)
-    if response.status_code == 200:
-
+    response.raise_for_status()
+    try:
         soup = BeautifulSoup(response.content, 'lxml')
 
         # If the request has error page 500 follow error path
@@ -92,7 +88,7 @@ def parse_and_paginate(message, context):
                 logging.info("Last url %s", url_decode)
 
             # Products <a/> attributes to be parsed
-            products_soups = soup.select(_CSS_SELECTOR)
+            products_soups = soup.select(_CHILD_CSS_SELECTOR)
             if not products_soups:
                 raise Exception('Invalid value of products')
             products_url = [_BASE_URL + attribute['href']
@@ -103,6 +99,8 @@ def parse_and_paginate(message, context):
                 product_obj = json.dumps({"url": product})
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))
-    else:
-        __error_path(publisher, pub_obj_encoded, tries,
-                     url_decode, error=response.status_code)
+    except Exception as error:
+        logging.error(error)
+        error_client = error_reporting.Client()
+        error_client.report_exception()
+
