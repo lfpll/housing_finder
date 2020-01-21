@@ -38,18 +38,17 @@ class Check_Live_Urls:
         """Function that returns the urls from the column in bigquery
 
         Args:
-            dataset ([type]): [name of the dataset]
-            table ([type]): [name of the table]
             url_columns (str, optional): [description]. Defaults to 'url'.
 
         Returns:
-            [type]: [description]
+        # TODO change this to a lazy load
+            [list]: [return the list of all urls]
         """
         table_ref = self.client.dataset(self.dataset).table(self.table)
         table = self.client.get_table(table_ref)
         field_url = [bigquery.schema.SchemaField(
             url_column, 'STRING', 'NULLABLE', None, ())]
-        # Return the list of urls from the url colum
+        # Return the list of urls from the url column
         rows_list = self.client.list_rows(table, selected_fields=field_url)
         return rows_list
 
@@ -57,10 +56,10 @@ class Check_Live_Urls:
         """A function that check urls offline based on a function
 
         Args:
-            urls_list ([type]): [description]
+            urls_list ([list[str]]): [list of urls in bigquery]
 
         Returns:get_urls_bigquery
-            [type]: [description]
+            [list[str]]: [list of urls offline ]
         """
         # Getting the function that checks if the url was deleted
         if validation_function is None:
@@ -75,6 +74,12 @@ class Check_Live_Urls:
         return delete_urls
 
     def store_data_gcs(self, offline_list, json_bucket):
+        """Store the data as a json into GCS with the name of the date
+        
+        Arguments:
+            offline_list {[list[str]]} -- [list ofurls offline]
+            json_bucket {[str]} -- [name of bucket of the file to be dropped]
+        """        
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(json_bucket)
         date_today = str(datetime.now().date()).replace(' ','_')

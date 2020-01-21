@@ -65,6 +65,7 @@ def mock_bigquery_client(monkeypatch, sample_folder):
     mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
     mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.parquet')
     mock_bq = Mock_Client_BigQuery(mock_sql)
+    
     def init(*args):
         return None
 

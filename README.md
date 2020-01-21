@@ -11,18 +11,16 @@ Because I was curious of playing with the cloud, terraform and related I started
 
 This is a simple folder schema mostly for automatically CI\CD for google cloud.
 
-**functions** are the lambda cloud functions
+**pull_data** are the lambda cloud functions
 * Parsing
 * Pagination
 * Downloading the HTML (storing data is cheap)
 
-**jobs** will be spark jobs and related necessary for the process
-
-**samples** is data for testing the functions
+**treat_data** will be spark jobs and related necessary for the process of ingesting data into bigquery
 
 **tests** are automated tests that I'm creating
 
-**code_cloud_unrelated** are python scripts for parsing using locally and fixing stupid things that I did
+**data_mainetance** python scripts for cleaning the table of errors
 
 ## Steps
 
