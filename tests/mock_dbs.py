@@ -62,6 +62,7 @@ class Mock_bucket:
     # Creating a temp folder to mock the bucket
     def __mock_folder(self,path=None):
         os.makedirs(self.bucket_path,exist_ok=True)
+        
     def blob(self,path):
         return Mock_blob(self.bucket_path+path)
 
