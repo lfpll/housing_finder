@@ -36,7 +36,6 @@ def parse_and_paginate(message, context):
     LOGGER = logging.getLogger("PAGINATION")
     LOGGER.setLevel(logging.INFO)
     LOGGER.addHandler(HANDLER)
-    import pdb;pdb.set_trace()
     error_client = error_reporting.Client()
 
 
@@ -84,7 +83,9 @@ def parse_and_paginate(message, context):
             if next_url:
                 # Loging if there is no next url and publish
                 next_url = next_url[0].select('a')[0]['href']
-                pub_next_obj = json.dumps({"url": _BASE_URL + next_url})
+                if not (next_url.startswith("http://") or next_url.startswith("https://")):
+                    next_url = _BASE_URL + next_url
+                pub_next_obj = json.dumps({"url": next_url})
                 publisher.publish(_THIS_FUNCTION_TOPIC,
                                   pub_next_obj.encode('utf-8'))
             else:
@@ -94,12 +95,14 @@ def parse_and_paginate(message, context):
             products_soups = soup.select(_CHILD_CSS_SELECTOR)
             if not products_soups:
                 raise Exception('Invalid value of products')
-            products_url = [_BASE_URL + attribute['href']
+            products_url = [attribute['href']
                             for attribute in products_soups]
 
             # Publishing urls to the products topic
-            for product in products_url:
-                product_obj = json.dumps({"url": product})
+            for url in products_url:
+                if not (url.startswith("http://") or url.startswith("https://")):
+                    url = _BASE_URL + next_url
+                product_obj = json.dumps({"url": url})
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))
     except HTTPError as error:

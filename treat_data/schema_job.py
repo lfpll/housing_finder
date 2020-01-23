@@ -31,7 +31,6 @@ def set_new_schema(name,type_name):
     return bq_schema
 
 if __name__ == "__main__":
-
     spark = SparkSession.builder.getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     jsonDF = spark.read.json((spark.read.text(input_path).repartition(1000).rdd))
