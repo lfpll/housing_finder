@@ -14,7 +14,7 @@ from data_mainetance.check_offline_urls import Check_Live_Urls
 # Create a function that maps the bad urls to requests
 
 # Mock database deletion
-
+@pytest.mark.test_mainetance
 class TestClass:
 
     @pytest.fixture(autouse=True)
