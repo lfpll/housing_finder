@@ -1,5 +1,6 @@
 google-cloud-pubsub
 google-cloud-logging
+google-cloud-error_reporting
 bs4
 lxml
 unidecode

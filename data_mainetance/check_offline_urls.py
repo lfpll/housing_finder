@@ -7,9 +7,9 @@ from google.cloud import bigquery, storage
 import argparse
 
 
-def url_exists_imoveis_web(response):
+def url_exists_imoveisweb(response):
     """A function that receives a requests.response object and 
-      checks if the url is valid for the imoveis web website
+      checks if the url is valid for the imoveis.web website
 
     Args:
         response ([type]): [description]
@@ -26,7 +26,7 @@ def url_exists_imoveis_web(response):
 class Check_Live_Urls:
 
     def __init__(self, dataset='newdata', table='rentaldata',
-                 function_check_deleted=url_exists_imoveis_web, sleep_time=1):
+                 function_check_deleted=url_exists_imoveisweb, sleep_time=1):
         # Function that checks if requests.response object was deleted
         self.check_deleted = function_check_deleted
         self.client = bigquery.Client()
