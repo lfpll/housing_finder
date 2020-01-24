@@ -5,20 +5,12 @@ from datetime import datetime
 import logging
 import requests
 from bs4 import BeautifulSoup
-from google.cloud import pubsub_v1,error_reporting , logging as cloud_logging
-from requests.exceptions import HTTPError
+from google.cloud import pubsub_v1, error_reporting, logging as cloud_logging
+from requests.exceptions import ConnectionError, HTTPError
 
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
-
-# Variables to make pagination works
-_THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"] # 'projects/educare-226818/topics/child_scrape'
-_DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"] # 'projects/educare-226818/topics/html_path'
-_BASE_URL = os.environ['BASE_URL'] # father_url = "https://www.imovelweb.com.br"
-_PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR'] # 'li.pag-go-next'
-_CHILD_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  # 'a.go-to-posting
-
 
 def parse_and_paginate(message, context):
     """Function that parses the page from pagination and sends the next page to pubsub
@@ -30,6 +22,14 @@ def parse_and_paginate(message, context):
     Raises:
         Exception: [Error, page is invalid or has no data]
     """
+    
+    # Variables to make pagination works
+    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     # 'projects/educare-226818/topics/child_scrape'
+    _DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]     # 'projects/educare-226818/topics/html_path'
+    _BASE_URL = os.environ['BASE_URL']     # father_url = "https://www.imovelweb.com.br"
+    _PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR']     # 'li.pag-go-next'
+    _CHILD_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  # 'a.go-to-posting
+
     # Instantiating log client
     LOG_CLIENT = cloud_logging.Client()
     HANDLER = LOG_CLIENT.get_default_handler()
@@ -38,24 +38,24 @@ def parse_and_paginate(message, context):
     LOGGER.addHandler(HANDLER)
     error_client = error_reporting.Client()
 
-
     def __error_path(publisher, pub_obj_encoded, tries, url, error):
         """Function to handle possible errors on pagination
 
         Args:
-            pub_obj_encoded ([dict]): [pubsub dict witn infos of the page and tries]
+            pub_obj_encoded ([dict]): [pubsub dict with infos of the page and tries]
             tries ([int]): [number of tries that this page was tried]
             url ([str]): [url to be parsed for pagination]
         """
         if tries < 5:
             publisher.publish(_THIS_FUNCTION_TOPIC, pub_obj_encoded)
         else:
-            raise HTTPError(
+            raise ConnectionError(
                 "%s pagination already parsed 5 times, ended with %s page", url, error)
+
     data = base64.b64decode(message['data']).decode('utf-8')
     json_decoded = json.loads(data)
     url_decode = json_decoded['url']
-    
+
     # Adding number o tries
     tries = 0
     if 'tries' in json_decoded:
@@ -64,7 +64,7 @@ def parse_and_paginate(message, context):
     # Creating element and getting response
     publisher = pubsub_v1.PublisherClient()
 
-    # Object for failture
+    # Object for failure
     pub_obj_encoded = json.dumps(
         {'url': url_decode, 'tries': tries}).encode("utf-8")
 
@@ -75,8 +75,7 @@ def parse_and_paginate(message, context):
 
         # If the request has error page 500 follow error path
         if soup.select('title')[0].text == 'Error 500':
-            __error_path(publisher, pub_obj_encoded,
-                         tries, url_decode, error=500)
+            raise HTTPError("500 Server Error: PAGE OFFLINE")
         else:
             # Next url soup object
             next_url = soup.select(_PAGINATION_CSS_SELECTOR)
@@ -89,7 +88,7 @@ def parse_and_paginate(message, context):
                 publisher.publish(_THIS_FUNCTION_TOPIC,
                                   pub_next_obj.encode('utf-8'))
             else:
-                logging.info("Last url %s",url_decode)
+                logging.info("Last url %s", url_decode)
 
             # Products <a/> attributes to be parsed
             products_soups = soup.select(_CHILD_CSS_SELECTOR)
@@ -106,9 +105,14 @@ def parse_and_paginate(message, context):
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))
     except HTTPError as error:
-        logging.error("PAGE MAX TRIES: %s",error)
+        if hasattr(error, 'message') and error.message.startswith("403"):
+            __error_path(publisher, pub_obj_encoded,
+                         tries, url_decode, error=403)
+        else:
+            error_client.report_exception()
+    except ConnectionError as error:
+        logging.error("PAGE MAX TRIES: %s", error.message)
         error_client.report_exception()
     except Exception as error:
         logging.error(error)
         error_client.report_exception()
-

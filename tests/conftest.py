@@ -5,9 +5,8 @@ import requests
 import pytest
 from unittest.mock import MagicMock
 from mock_dbs import Mock_Sql_conn,Mock_Client_BigQuery, Mock_storage_client
-from google.cloud import pubsub_v1, logging, storage
+from google.cloud import pubsub_v1, logging, storage, bigquery
 from unittest.mock import patch
-from google.cloud import client, bigquery
 from mock_gcloud import *
 PARENT_PATH = os.path.abspath(os.path.join(dirname(__file__), os.pardir))
 SAMPLES_FOLDER = PARENT_PATH + '/tests/samples/'
