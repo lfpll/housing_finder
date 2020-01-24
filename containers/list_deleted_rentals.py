@@ -7,9 +7,9 @@ from google.cloud import bigquery, storage
 import argparse
 
 
-def url_exists_imoveisweb(response):
+def url_exists_imoveis_web(response):
     """A function that receives a requests.response object and 
-      checks if the url is valid for the imoveis.web website
+      checks if the url is valid for the imoveis web website
 
     Args:
         response ([type]): [description]
@@ -18,7 +18,7 @@ def url_exists_imoveisweb(response):
         return False
     # Special case of bad status_code system
     soup = BeautifulSoup(response.content, 'lxml')
-    if soup.select('title')[0].text == 'Error 500':
+    if soup.find('title').text.strip() == 'Error 500' or soup.find("h5",{"class":"mdl-titlea"}).text.strip() == "Que pena!! Este anúncio finalizou.":
         return False
     return True
 
@@ -26,7 +26,7 @@ def url_exists_imoveisweb(response):
 class Check_Live_Urls:
 
     def __init__(self, dataset='newdata', table='rentaldata',
-                 function_check_deleted=url_exists_imoveisweb, sleep_time=1):
+                 function_check_deleted=url_exists_imoveis_web, sleep_time=1):
         # Function that checks if requests.response object was deleted
         self.check_deleted = function_check_deleted
         self.client = bigquery.Client()
@@ -75,6 +75,12 @@ class Check_Live_Urls:
         return delete_urls
 
     def store_data_gcs(self, offline_list, json_bucket):
+        """ 
+        
+        Arguments:
+            offline_list {[list]} -- [list of urls]
+            json_bucket {[str]} -- [path to json]
+        """        
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(json_bucket)
         date_today = str(datetime.now().date()).replace(' ','_')

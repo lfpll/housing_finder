@@ -106,7 +106,7 @@ def parse_propertie_page(data, context):
                 audits_final_list.extend(additive)
             audits_final_list = [unidecode.unidecode(
                 auditive.text.strip()) for auditive in audits_final_list]
-            final_tups.append(('additions', audits_final_list))
+            final_tups.append(('adicionais', audits_final_list))
 
         # Dynamical attributes gotten from page
         if len(attrs_block) == 1:
