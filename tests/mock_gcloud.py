@@ -29,9 +29,8 @@ def mock_cloud_logging(monkeypatch):
 
 # This screw the error handling if it happens
 @pytest.fixture()
-def mock_cloud_error_reporting(monkeypatch):
-
-    def raise_error():
+def mock_cloud_error_reporting(monkeypatch,capsys):
+    def raise_error(*args,**kwargs):
         raise Exception("ERROR_REPORTING|Test of error worked")
     monkeypatch.setattr(error_reporting.Client, '__init__', init)
     monkeypatch.setattr(error_reporting.Client,

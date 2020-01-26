@@ -69,8 +69,8 @@ def parse_and_paginate(message, context):
         {'url': url_decode, 'tries': tries}).encode("utf-8")
 
     response = requests.get(url_decode, headers=HEADERS)
-    response.raise_for_status()
     try:
+        response.raise_for_status()
         soup = BeautifulSoup(response.content, 'lxml')
 
         # If the request has error page 500 follow error path
@@ -89,7 +89,6 @@ def parse_and_paginate(message, context):
                                   pub_next_obj.encode('utf-8'))
             else:
                 logging.info("Last url %s", url_decode)
-
             # Products <a/> attributes to be parsed
             products_soups = soup.select(_CHILD_CSS_SELECTOR)
             if not products_soups:
@@ -105,10 +104,11 @@ def parse_and_paginate(message, context):
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))
     except HTTPError as error:
-        if hasattr(error, 'message') and error.message.startswith("403"):
+        if error.response.status_code == 403:
             __error_path(publisher, pub_obj_encoded,
                          tries, url_decode, error=403)
         else:
+            logging.error(error)
             error_client.report_exception()
     except ConnectionError as error:
         logging.error("PAGE MAX TRIES: %s", error.message)
