@@ -5,7 +5,7 @@ import os
 import shutil
 import json
 from datetime import datetime   
-from containers.list_deleted_rentals import Check_Live_Urls
+from data_mainetance.check_offline_urls import Check_Live_Urls
 
 # This is a test that removes a function from a sql lite like database based on a url column that is offlinee
 # Mock database with an url
@@ -14,7 +14,7 @@ from containers.list_deleted_rentals import Check_Live_Urls
 # Create a function that maps the bad urls to requests
 
 # Mock database deletion
-
+@pytest.mark.test_mainetance
 class TestClass:
 
     @pytest.fixture(autouse=True)
@@ -42,24 +42,21 @@ class TestClass:
                             'http://test-500-url.com', 'url'].count()
         error_status_code = df.loc[df['url'] ==
                                    'http://test-fail-url.com', 'url'].count()
-
         table_name = 'mock'
         dataset = 'test'
         # Instanciating class of removal
-
         validate_instance = Check_Live_Urls(table_name, dataset)
-        all_urls = validate_instance.get_urls_bigquery(table=table_name,
-                                                       dataset=dataset, url_column='url')
+        all_urls = validate_instance.get_urls_bigquery(url_column='url')
         # Comparing the size of the urls and the dataframe mocked
         assert df_size == len(all_urls)
 
-        # List dead urls
+        # Asserting dead urls is correct
         all_urls = [val[0] for val in all_urls]
         dead_urls = validate_instance.check_not_working_urls(
             urls_list=all_urls)
         assert error_page + error_status_code == len(dead_urls)
 
-        # Check if blob is stored and with the same length
+        # Checking if storing data is working
         bucket_name = "mock_buck"
         validate_instance.store_data_gcs(dead_urls, bucket_name)
         file_path = "%s/tmp/mock_buck/%s" % (current_folder, str(datetime.now().date()).replace(' ','_'))

@@ -1,6 +1,0 @@
-google-cloud-pubsub
-google-cloud-logging
-bs4
-lxml
-unidecode
-

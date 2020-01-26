@@ -1,7 +1,0 @@
-google-cloud-storage
-google-cloud-error_reporting
-bs4
-lxml
-unidecode
-requests
-

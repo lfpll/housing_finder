@@ -7,9 +7,9 @@ from google.cloud import bigquery, storage
 import argparse
 
 
-def url_exists_imoveis_web(response):
+def url_exists_imoveisweb(response):
     """A function that receives a requests.response object and 
-      checks if the url is valid for the imoveis web website
+      checks if the url is valid for the imoveis.web website
 
     Args:
         response ([type]): [description]
@@ -18,7 +18,7 @@ def url_exists_imoveis_web(response):
         return False
     # Special case of bad status_code system
     soup = BeautifulSoup(response.content, 'lxml')
-    if soup.find('title').text.strip() == 'Error 500' or soup.find("h5",{"class":"mdl-titlea"}).text.strip() == "Que pena!! Este anúncio finalizou.":
+    if soup.find('title').text == 'Error 500' or soup.find("p",string="Anúncio finalizado"):
         return False
     return True
 
@@ -26,7 +26,7 @@ def url_exists_imoveis_web(response):
 class Check_Live_Urls:
 
     def __init__(self, dataset='newdata', table='rentaldata',
-                 function_check_deleted=url_exists_imoveis_web, sleep_time=1):
+                 function_check_deleted=url_exists_imoveisweb, sleep_time=1):
         # Function that checks if requests.response object was deleted
         self.check_deleted = function_check_deleted
         self.client = bigquery.Client()
@@ -34,22 +34,21 @@ class Check_Live_Urls:
         self.table = table
         self.sleep_time = sleep_time
 
-    def get_urls_bigquery(self, dataset, table, url_column='url'):
+    def get_urls_bigquery(self,  url_column='url'):
         """Function that returns the urls from the column in bigquery
 
         Args:
-            dataset ([type]): [description]
-            table ([type]): [description]
             url_columns (str, optional): [description]. Defaults to 'url'.
 
         Returns:
-            [type]: [description]
+        # TODO change this to a lazy load
+            [list]: [return the list of all urls]
         """
-        table_ref = self.client.dataset(dataset).table(table)
+        table_ref = self.client.dataset(self.dataset).table(self.table)
         table = self.client.get_table(table_ref)
         field_url = [bigquery.schema.SchemaField(
             url_column, 'STRING', 'NULLABLE', None, ())]
-        # Return the list of urls from the url colum
+        # Return the list of urls from the url column
         rows_list = self.client.list_rows(table, selected_fields=field_url)
         return rows_list
 
@@ -57,10 +56,10 @@ class Check_Live_Urls:
         """A function that check urls offline based on a function
 
         Args:
-            urls_list ([type]): [description]
+            urls_list ([list[str]]): [list of urls in bigquery]
 
-        Returns:
-            [type]: [description]
+        Returns:get_urls_bigquery
+            [list[str]]: [list of urls offline ]
         """
         # Getting the function that checks if the url was deleted
         if validation_function is None:
@@ -75,11 +74,11 @@ class Check_Live_Urls:
         return delete_urls
 
     def store_data_gcs(self, offline_list, json_bucket):
-        """ 
+        """Store the data as a json into GCS with the name of the date
         
         Arguments:
-            offline_list {[list]} -- [list of urls]
-            json_bucket {[str]} -- [path to json]
+            offline_list {[list[str]]} -- [list ofurls offline]
+            json_bucket {[str]} -- [name of bucket of the file to be dropped]
         """        
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(json_bucket)
@@ -91,8 +90,12 @@ class Check_Live_Urls:
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description='Arguments of table and dataset')
     parser.add_argument('--dataset', type=str,
-                    help='Path of output of the dataframe', required=True)
+                    help='Path of output of the dataframe', default='newdata')
     parser.add_argument('--table', type=str,
-                    help='Path of output of the dataframe', required=True)
-    bq_args = vars(parser.parse_known_args())
+                    help='Path of output of the dataframe', default='rentaldata')
+    bq_args = vars(parser.parse_known_args()[0])
     check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])
+    urls_list = check_urls.get_urls_bigquery()
+    only_urls = (url[0] for url in urls_list)
+    offline_urls = check_urls.check_not_working_urls(only_urls)
+    check_urls.store_data_gcs(offline_list=offline_urls,json_bucket='tmp-delete')
