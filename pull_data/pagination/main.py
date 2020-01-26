@@ -72,7 +72,7 @@ def parse_and_paginate(message, context):
     try:
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'lxml')
-
+        
         # If the request has error page 500 follow error path
         if soup.select('title')[0].text == 'Error 500':
             raise HTTPError("500 Server Error: PAGE OFFLINE")
