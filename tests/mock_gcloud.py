@@ -1,4 +1,5 @@
-from google.cloud import pubsub_v1, error_reporting, logging as cloud_logging
+from google.cloud import pubsub_v1, error_reporting,storage, logging as cloud_logging
+from mock_dbs import Mock_Sql_conn,Mock_Client_BigQuery, Mock_storage_client
 from functools import partial
 from unittest.mock import MagicMock
 import pytest
@@ -44,3 +45,30 @@ def mock_cloud_pubsub_v1(monkeypatch):
         print(output)
     monkeypatch.setattr(pubsub_v1.PublisherClient, '__init__', init)
     monkeypatch.setattr(pubsub_v1.PublisherClient, 'publish', mock_publish)
+
+
+@pytest.fixture()
+def mock_storage_client(monkeypatch):
+    monkeypatch.setattr(storage,'Client',Mock_storage_client)
+
+
+@pytest.fixture()
+def mock_bigquery_client(monkeypatch, sample_folder):
+    mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
+    mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.csv')
+    mock_bq = Mock_Client_BigQuery(mock_sql)
+    
+    def init(*args):
+        return None
+
+    mock_client = MagicMock()
+    mock_table = MagicMock()
+    mock_table.table.return_value = None
+    mock_client.return_value = mock_table
+
+    # Moking bigquery 
+    monkeypatch.setattr(bigquery.Client,'__init__',init)
+    monkeypatch.setattr(bigquery.Client,'dataset',mock_client)
+    monkeypatch.setattr(bigquery.Client,'list_rows',mock_bq.list_rows)
+    monkeypatch.setattr(bigquery.Client,'get_table',mock_bq.get_table)
+    monkeypatch.setattr(storage,'Client',Mock_storage_client)

@@ -20,28 +20,4 @@ def current_folder():
 def sample_folder():
     return SAMPLES_FOLDER
 
-@pytest.fixture()
-def mock_bigquery_client(monkeypatch, sample_folder):
-    mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
-    mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.csv')
-    mock_bq = Mock_Client_BigQuery(mock_sql)
-    
-    def init(*args):
-        return None
-
-    mock_client = MagicMock()
-    mock_table = MagicMock()
-    mock_table.table.return_value = None
-    mock_client.return_value = mock_table
-
-    # Moking bigquery 
-    monkeypatch.setattr(bigquery.Client,'__init__',init)
-    monkeypatch.setattr(bigquery.Client,'dataset',mock_client)
-    monkeypatch.setattr(bigquery.Client,'list_rows',mock_bq.list_rows)
-    monkeypatch.setattr(bigquery.Client,'get_table',mock_bq.get_table)
-    monkeypatch.setattr(storage,'Client',Mock_storage_client)
-
-@pytest.fixture()
-def mock_storage_client(monkeypatch):
-    monkeypatch.setattr(storage,'Client',Mock_storage_client)
 
