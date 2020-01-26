@@ -1,4 +1,4 @@
-from google.cloud import pubsub_v1, error_reporting,storage, logging as cloud_logging
+from google.cloud import pubsub_v1, error_reporting,storage,bigquery, logging as cloud_logging
 from mock_dbs import Mock_Sql_conn,Mock_Client_BigQuery, Mock_storage_client
 from functools import partial
 from unittest.mock import MagicMock
@@ -48,7 +48,7 @@ def mock_cloud_pubsub_v1(monkeypatch):
 
 
 @pytest.fixture()
-def mock_storage_client(monkeypatch):
+def mock_storage_client(monkeypatch,sample_folder):
     monkeypatch.setattr(storage,'Client',Mock_storage_client)
 
 
