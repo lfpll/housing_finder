@@ -59,7 +59,7 @@ class Mock_blob:
 class Mock_bucket:
     def __init__(self, bucket):
         self.bucket_name = bucket
-        self.bucket_path = os.environ["TMP_FOLDER"] + self.bucket_name
+        self.bucket_path = os.environ["TMP_FOLDER"] + self.bucket_name +'/'
         self.__mock_folder()
 
     # Creating a temp folder to mock the bucket
