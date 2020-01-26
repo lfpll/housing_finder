@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import json
 import base64
 import requests
+
 import pytest
 from google.cloud import pubsub_v1
 import os
@@ -20,22 +21,25 @@ class Test_Pagination:
     os.environ['PAGINATION_SELECTOR'] = 'li.pag-go-next'
     os.environ['PARSE_SELECTOR'] = 'a.go-to-posting'
 
-    def mock_request(mock_html,*args, **kwargs,code=200):
-        response_mock = requests.Response()
-        response_mock.status_code = code
-        response_mock._content = open(file_path)
-        return response_mock
+
 
     @pytest.fixture()
     def mock_200_requests(self, monkeypatch):
-        replace_200_http = partial(self.mock_request,code=200)
-        monkeypatch.setattr(requests, 'get', replace_200_http)
-    
-    def submit_message(self,page_path):
-        # Expected format of input
-        encoded_obj = {'data': base64.b64encode(
-            json.dumps({'url': page_path}).encode('utf-8'))}
+        def mock_request(html_path,*args, **kwargs):
+            response_mock = requests.Response()
+            response_mock.status_code = 200
+            response_mock._content = open(html_path)
+            return response_mock
+        monkeypatch.setattr(requests, 'get', mock_request)
 
+    def submit_message(self,page_path, tries = None):
+        # Expected format of input
+        data = {'url': page_path}
+        if tries is not None:
+            data['tries'] = tries
+
+        encoded_obj = {'data': base64.b64encode(
+            json.dumps(data).encode('utf-8'))}
         # Capturing the output using Mocked pubsub
         paging.parse_and_paginate(message=encoded_obj, context='')
 
@@ -56,24 +60,40 @@ class Test_Pagination:
         pd.testing.assert_frame_equal(df_events, expected_df)
 
 
-    def test_pagination_offline_page(self, sample_folder,mock_cloud_logging, mock_cloud_error_reporting, mock_cloud_pubsub_v1):
+    def test_pagination_500_page(self, mock_200_requests,sample_folder,monkeypatch,mock_cloud_logging, mock_cloud_error_reporting, mock_cloud_pubsub_v1):
         sample_offline_page = '{0}error_500.html'.format(sample_folder)
-        
-        # Expected format of input
-        encoded_obj = {'data': base64.b64encode(
-            json.dumps({'url': sample_offline_page}).encode('utf-8'))}
-
         # Capturing the output using Mocked pubsub
-        paging.parse_and_paginate(message=encoded_obj, context='')
-        import pdb;pdb.set_trace()
-
+        with pytest.raises(Exception):
+            self.submit_message(sample_offline_page)
         pass
 
-    def test_pagination_500_page(self, sample_folder):
-        pass
+    def test_pagination_404(self, mock_200_requests,monkeypatch, sample_folder,mock_cloud_logging, mock_cloud_error_reporting, mock_cloud_pubsub_v1):
+        def mock_404(html_path,*args, **kwargs):
+            response_mock = requests.Response()
+            response_mock.status_code = 404
+            return response_mock
+        monkeypatch.setattr(requests, 'get', mock_404)
+        # Capturing the output using Mocked pubsub
+        with pytest.raises(Exception):
+            self.submit_message("")
 
-    def test_pagination_403_page(self, sample_folder):
-        pass
+    def test_pagination_403(self, capsys,monkeypatch, sample_folder,mock_cloud_logging, mock_cloud_error_reporting, mock_cloud_pubsub_v1):
+        def mock_403(html_path,*args, **kwargs):
+            response_mock = requests.Response()
+            response_mock.status_code = 403
+            return response_mock
+        monkeypatch.setattr(requests, 'get', mock_403)
+        
+        self.submit_message("")
+        out, err = capsys.readouterr()
+        assert out.strip() == "PUBSUB|mock_this_topic|{\"url\": \"\", \"tries\": 0}|"
 
-    def test_pagination_max_tries(self, sample_folder):
-        pass
+
+    def test_pagination_max_tries(self, sample_folder,monkeypatch,mock_200_requests, capsys ,mock_cloud_logging, mock_cloud_error_reporting, mock_cloud_pubsub_v1):
+        def mock_403(html_path,*args, **kwargs):
+            response_mock = requests.Response()
+            response_mock.status_code = 403
+            return response_mock
+        monkeypatch.setattr(requests, 'get', mock_403)
+        with pytest.raises(requests.exceptions.ConnectionError):
+            self.submit_message('',tries=6)

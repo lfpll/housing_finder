@@ -20,10 +20,10 @@ def current_folder():
 def sample_folder():
     return SAMPLES_FOLDER
 
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def mock_bigquery_client(monkeypatch, sample_folder):
     mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
-    mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.parquet')
+    mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.csv')
     mock_bq = Mock_Client_BigQuery(mock_sql)
     
     def init(*args):
