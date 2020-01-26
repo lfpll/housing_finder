@@ -34,18 +34,18 @@ class Check_Live_Urls:
         self.table = table
         self.sleep_time = sleep_time
 
-    def get_urls_bigquery(self, dataset, table, url_column='url'):
+    def get_urls_bigquery(self,  url_column='url'):
         """Function that returns the urls from the column in bigquery
 
         Args:
-            dataset ([type]): [description]
-            table ([type]): [description]
+            dataset ([type]): [name of the dataset]
+            table ([type]): [name of the table]
             url_columns (str, optional): [description]. Defaults to 'url'.
 
         Returns:
             [type]: [description]
         """
-        table_ref = self.client.dataset(dataset).table(table)
+        table_ref = self.client.dataset(self.dataset).table(self.table)
         table = self.client.get_table(table_ref)
         field_url = [bigquery.schema.SchemaField(
             url_column, 'STRING', 'NULLABLE', None, ())]
@@ -59,7 +59,7 @@ class Check_Live_Urls:
         Args:
             urls_list ([type]): [description]
 
-        Returns:
+        Returns:get_urls_bigquery
             [type]: [description]
         """
         # Getting the function that checks if the url was deleted
@@ -96,3 +96,6 @@ if __name__== "__main__":
                     help='Path of output of the dataframe', required=True)
     bq_args = vars(parser.parse_known_args())
     check_urls = Check_Live_Urls(dataset=bq_args['dataset'],table=bq_args['table'])
+    urls_list = check_urls.get_urls_bigquery()
+    offline_urls = check_urls.check_not_working_urls(urls_list)
+    check_urls.store_data_gcs(offline_list=offline_urls,json_bucket='tmp-delete')
