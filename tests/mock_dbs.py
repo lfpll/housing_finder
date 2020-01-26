@@ -20,7 +20,7 @@ class Mock_Sql_conn:
             print(e)
 
     def load_mock_data_parquet(self, data_path):
-        df = pd.read_parquet(data_path)
+        df = pd.read_csv(data_path)
         df.to_sql(name='mock', con=self.conn)
 
     def query_database(self, query):
@@ -31,7 +31,6 @@ class Mock_Sql_conn:
 
 
 class Mock_Client_BigQuery:
-
     def __init__(self, mock_sql_conn, credentials=''):
         self.data = mock_sql_conn
         self.table = 'mock'
@@ -46,17 +45,21 @@ class Mock_Client_BigQuery:
         return self.table
 
 class Mock_blob:
-    def __init__(self, blob_path):
-        self.blob_path = blob_path
+    def __init__(self, blob_path,blob_folder=''):
+        self.blob_path = blob_folder+blob_path
+        self.metadata = {}
 
     def upload_from_string(self,text):
         with open(self.blob_path, 'w') as mock_file:
             mock_file.write(text)
 
+    def exists(self):
+        return os.path.exists(self.blob_path)
+
 class Mock_bucket:
     def __init__(self, bucket):
         self.bucket_name = bucket
-        self.bucket_path = os.getcwd() + "/tmp/%s/"%(self.bucket_name)
+        self.bucket_path = os.environ["TMP_FOLDER"] + self.bucket_name +'/'
         self.__mock_folder()
 
     # Creating a temp folder to mock the bucket

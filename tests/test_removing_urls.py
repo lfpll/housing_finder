@@ -17,7 +17,7 @@ from data_mainetance.check_offline_urls import Check_Live_Urls
 @pytest.mark.test_mainetance
 class TestClass:
 
-    @pytest.fixture(autouse=True)
+    @pytest.fixture()
     def request_replacer(self, sample_folder, monkeypatch):
         def get_replacer_bigquery(url):
             response_mock = requests.Response()
@@ -26,7 +26,7 @@ class TestClass:
             elif url == 'http://test-sucess-url.com':
                 response_mock.status_code = 200
                 response_mock._content = open(
-                    sample_folder+'pagination_page.html')
+                    sample_folder+'sample_pagination/pagination_page.html')
             elif url == 'http://test-500-url.com':
                 response_mock.status_code = 200
                 response_mock._content = open(sample_folder+'error_500.html')
@@ -34,9 +34,9 @@ class TestClass:
 
         monkeypatch.setattr(requests, 'get', get_replacer_bigquery)
 
-    def test_live_urls(self, current_folder,sample_folder, mock_bigquery_client, mock_storage_client):
+    def test_live_urls(self, current_folder,request_replacer,sample_folder, mock_bigquery_client, mock_storage_client):
         # Reading mock data to use to assert
-        df = pd.read_parquet(sample_folder+'mock_rental_data.parquet')
+        df = pd.read_csv(sample_folder+'mock_rental_data.csv')
         df_size = len(df)
         error_page = df.loc[df['url'] ==
                             'http://test-500-url.com', 'url'].count()
