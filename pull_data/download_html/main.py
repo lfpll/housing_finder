@@ -52,7 +52,7 @@ def download_page(message, context):
         url = json_decoded['url']
 
         # Out file name to gsbucket
-        file_name = url.split('/')[-1].replace('.','_').replace(':','_').replace(';','_')
+        file_name = url.split('/')[-1].replace(':','_').replace(';','_')
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(_OUT_BUCKET)
         blob = bucket.blob(file_name)
@@ -98,7 +98,6 @@ def download_page(message, context):
                 # Publish path to be parsed and transformed to json if new
                 publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception as error:
-        import pdb;pdb.set_trace()
         logging.error(error)
         error_client = error_reporting.Client()
         error_client.report_exception()
