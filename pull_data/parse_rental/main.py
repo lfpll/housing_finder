@@ -14,11 +14,6 @@ REGEXP_PRICE = re.compile(
 REGEXP_MARKERS = re.compile(r'markers=(.+?)\&')
 REGEXP_CORDINATES = re.compile('\'mapLat\'|\'mapLng\'')
 
-# Enviroment variables
-_IN_BUCKET = os.environ['IN_BUCKET']  # 'imoveis-data'
-_OUT_BUCKET = os.environ['OUT_BUCKET']  # bigtable-data
-
-
 def parse_propertie_page(data, context):
     """This a lambda function for cloud function on the google cloud
        This receiveis two inputs 
@@ -33,6 +28,11 @@ def parse_propertie_page(data, context):
     Raises:
         Exception: [Exception for erros on the process]
     """
+    # Enviroment variables
+    _IN_BUCKET = os.environ['IN_BUCKET']  # 'imoveis-data'
+    _OUT_BUCKET = os.environ['OUT_BUCKET']  # bigtable-data
+
+
     try:
         # Initializing the data
         error_client = error_reporting.Client()
@@ -42,7 +42,7 @@ def parse_propertie_page(data, context):
 
         file_path = json_obj['file_path']
         url = json_obj['url']
-        blob = bucket.blob(file_path.replace(':','_').replace('.','_'))
+        blob = bucket.blob(file_path.replace(':','_'))
         html_data = blob.download_as_string()
         soup = BeautifulSoup(html_data, 'lxml')
 
@@ -158,7 +158,7 @@ def parse_propertie_page(data, context):
                     final_tups.append(('pub_anun', text[-1].strip()))
                 elif text[0].find('Imovelweb') > -1:
                     final_tups.append(('pub_code', int(text[-1].strip())))
-
+        
         # Publication Date
         if pub_date is not None:
             final_tups.append(('pub_data', pub_date.text.strip()))
@@ -175,12 +175,13 @@ def parse_propertie_page(data, context):
         
         bucket = client.get_bucket(_OUT_BUCKET)
         folder = 'stage'
+
         if not json_obj['new_blob']: 
             folder = 'update_stage'
         new_blob = bucket.blob(
                 '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
 
-    except Exception:
+    except Exception as error:
         error_client = error_reporting.Client()
         error_client.report_exception()
