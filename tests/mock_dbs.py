@@ -55,6 +55,9 @@ class Mock_blob:
 
     def exists(self):
         return os.path.exists(self.blob_path)
+    
+    def download_as_string(self):
+        return bytes(open(self.blob_path).read().encode("utf-8"))
 
 class Mock_bucket:
     def __init__(self, bucket):

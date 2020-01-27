@@ -1,5 +1,6 @@
 from pull_data.pagination import main as paging
 from pull_data.download_html import main as download_html
+from pull_data.parse_rental import main as parse_rental
 from unittest import mock
 import pandas as pd
 from unittest.mock import MagicMock
@@ -27,9 +28,11 @@ def submit_message_paging(page_path, tries=None):
     paging.parse_and_paginate(message=encoded_obj, context='')
 
 
-def submit_message_download(page_path):
+def submit_message_download(page_path,tries=None):
     # Expected format of input
     data = {'url': page_path}
+    if tries is not None:
+        data['tries'] = tries
     encoded_obj = {'data': base64.b64encode(
         json.dumps(data).encode('utf-8'))}
     # Capturing the output using Mocked pubsub
@@ -130,20 +133,57 @@ class Test_pull_data:
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
 
-        msg_exp_new_blob = 'PUBSUB|mock_parse-topic|{"file_path": "pagination_page_html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": true}|'
-        assert out.strip() == msg_exp_new_blob
-        sample_page_path = '{0}sample_pagination/pagination_page.html'.format(
-            sample_folder)
-
+        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": true}', '']
+        assert all([a == b for a, b in zip(msg_exp_new_blob,out.strip().split("|"))])
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
         # Test with existing blob
-        msg_exp_update_blob = 'PUBSUB|mock_parse-topic|{"file_path": "pagination_page_html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": false}|'
-        assert out.strip() == msg_exp_update_blob
+        msg_exp_update_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": false}', '']
+        assert all([a == b for a, b in zip(msg_exp_update_blob,out.strip().split("|"))])
         # removing mock blob
         shutil.rmtree(os.environ["TMP_FOLDER"])
 
+    def test_pull_data_tries(self, capsys,monkeypatch, mock_200_requests, mock_storage_client,
+                           mock_cloud_pubsub_v1, mock_cloud_logging, mock_cloud_error_reporting):
+        def mock_403(html_path, *args, **kwargs):
+            response_mock = requests.Response()
+            response_mock.status_code = 403
+            return response_mock
+        monkeypatch.setattr(requests, 'get', mock_403)
 
-    def test_existent_blob(self, mock_storage_client, mock_200_requests):
+        submit_message_download("")
+        out, err = capsys.readouterr()
+        assert out.strip(
+        ) == "PUBSUB|mock_this_topic|{\"url\": \"\", \"tries\": 0}|"
+        out, err = capsys.readouterr()
+        with pytest.raises(Exception):
+            submit_message_download("",tries=6)
 
-        pass
+class Test_parse_rental:
+    
+    os.environ['IN_BUCKET']  = "in_bucket" 
+    os.environ['OUT_BUCKET']  = "out_bucket"
+
+    def test_parse_rental_ok(self, sample_folder, capsys, mock_storage_client, mock_cloud_error_reporting):
+        data = {'url': "normal_page.html","file_path":"normal_page.html","new_blob":True}
+        encoded_obj = {'data': base64.b64encode(
+            json.dumps(data).encode('utf-8'))}
+
+        # Capturing the output using Mocked pubsub
+        in_bucket = os.environ["TMP_FOLDER"] + os.environ['IN_BUCKET']
+        out_bucket = os.environ["TMP_FOLDER"] + os.environ['OUT_BUCKET'] 
+
+        os.makedirs(in_bucket,exist_ok=True)
+        os.makedirs(out_bucket+"/stage",exist_ok=True)
+
+        shutil.copy(sample_folder+"sample_download_html/normal_page.html",in_bucket)
+        parse_rental.parse_propertie_page(encoded_obj,"")
+        processed = json.loads(open(out_bucket+"/stage/normal_page.json").read())
+        not_processed = json.loads(open(sample_folder+"normal_page.json").read())
+
+        del processed["date_stored"]
+        del not_processed["date_stored"]
+        assert  processed.items() <= not_processed.items()
+        out, err = capsys.readouterr()
+        shutil.rmtree(os.environ["TMP_FOLDER"])
+        
