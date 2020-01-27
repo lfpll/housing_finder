@@ -59,9 +59,9 @@ class TestClass:
         # Checking if storing data is working
         bucket_name = "mock_buck"
         validate_instance.store_data_gcs(dead_urls, bucket_name)
-        file_path = "%s/tmp/mock_buck/%s" % (current_folder, str(datetime.now().date()).replace(' ','_'))
+        file_path ="%s/tmp/mock_buck/%s" % (current_folder, str(datetime.now().date()).replace(' ','_'))
         assert os.path.exists(file_path)
         with open(file_path) as json_file:
             assert error_page + \
                 error_status_code == len(json.load(json_file)['delete'])
-        shutil.rmtree("%s/tmp"% current_folder)
+        shutil.rmtree(os.environ["TMP_FOLDER"])
