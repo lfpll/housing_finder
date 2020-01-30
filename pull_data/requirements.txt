@@ -1,6 +1,8 @@
 google-cloud-storage
 google-cloud-pubsub
 google-cloud-error_reporting
+google-cloud-bigquery
+
 bs4
 lxml
 unidecode

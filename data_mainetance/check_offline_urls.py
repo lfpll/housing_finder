@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 from google.cloud import bigquery, storage
 import argparse
 
-
 def url_exists_imoveisweb(response):
     """A function that receives a requests.response object and 
       checks if the url is valid for the imoveis.web website

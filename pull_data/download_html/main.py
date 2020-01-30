@@ -80,7 +80,10 @@ def download_page(message, context):
         if response.status_code != 200:
             __error_path(publisher, pub_obj_encoded, tries,
                          url, error=response.status_code)
-        else:
+        else:  
+
+
+            
             soup = BeautifulSoup(response.content, 'lxml')
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':

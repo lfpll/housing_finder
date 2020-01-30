@@ -52,6 +52,10 @@ def parse_and_paginate(message, context):
             raise ConnectionError(
                 "%s pagination already parsed 5 times, ended with %s page", url, error)
 
+
+
+
+
     data = base64.b64decode(message['data']).decode('utf-8')
     json_decoded = json.loads(data)
     url_decode = json_decoded['url']
