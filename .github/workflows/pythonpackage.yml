@@ -23,14 +23,16 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        rm -rf ./tmp
         echo "$github.event_path"
         IFS='/'
         read -ra ARR <<< "$github.event_path"
         export update_gcf="${ARR[1]}"
         python -m pip install --upgrade pip
         pip install -r "pull_data/requirements.txt"
+        ls ./tests/samples
 
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest ./test/test_pull_data.py -k "Test_$update_gcf"
+        pytest -v ./tests/test_pull_data.py -k "Test_$update_gcf" 

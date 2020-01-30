@@ -5,7 +5,6 @@ __pycache__/
 venv/
 token_gcloud.json
 *.json
-*.csv
 .metals
 functions/**/__init__.py
 *.yaml

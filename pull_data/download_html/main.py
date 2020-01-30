@@ -83,7 +83,8 @@ def download_page(message, context):
         else:  
 
 
-            
+
+
             soup = BeautifulSoup(response.content, 'lxml')
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':

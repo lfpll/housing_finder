@@ -37,6 +37,8 @@ def parse_and_paginate(message, context):
     LOGGER.setLevel(logging.INFO)
     LOGGER.addHandler(HANDLER)
     error_client = error_reporting.Client()
+    
+    
 
     def __error_path(publisher, pub_obj_encoded, tries, url, error):
         """Function to handle possible errors on pagination
@@ -51,10 +53,6 @@ def parse_and_paginate(message, context):
         else:
             raise ConnectionError(
                 "%s pagination already parsed 5 times, ended with %s page", url, error)
-
-
-
-
 
     data = base64.b64decode(message['data']).decode('utf-8')
     json_decoded = json.loads(data)

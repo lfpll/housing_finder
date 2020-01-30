@@ -133,12 +133,12 @@ class Test_download_html:
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
 
-        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": true}', '']
+        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'", "new_blob": true}', '']
         assert all([a == b for a, b in zip(msg_exp_new_blob,out.strip().split("|"))])
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
         # Test with existing blob
-        msg_exp_update_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": false}', '']
+        msg_exp_update_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'", "new_blob": false}', '']
         assert all([a == b for a, b in zip(msg_exp_update_blob,out.strip().split("|"))])
         # removing mock blob
         shutil.rmtree(os.environ["TMP_FOLDER"])
