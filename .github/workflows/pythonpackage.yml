@@ -1,4 +1,4 @@
-name: Python package
+name: Test and deploy pagination
 
 on:
   push:
@@ -6,10 +6,18 @@ on:
       - devops_pipe
     # file paths to consider in the event. Optional; defaults to all.
     paths:
-      - 'pull_data/**/*.py'
-jobs:
-  build:
+      - 'pull_data/pagination/*'
 
+env:
+  GCF_NAME: pagination
+  TRIGGER_TOPIC: pagination
+  # enviroment variables, python code and requirements path
+  SOURCE_PATH: ./pull_data/pagination
+
+
+jobs:
+  test:
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,15 +32,24 @@ jobs:
     - name: Install dependencies
       run: |
         rm -rf ./tmp
-        echo "$github.event_path"
-        IFS='/'
-        read -ra ARR <<< "$github.event_path"
-        export update_gcf="${ARR[1]}"
         python -m pip install --upgrade pip
-        pip install -r "pull_data/requirements.txt"
-        ls ./tests/samples
+        pip install -r "$SOURCE_PATH/requirements.txt"
 
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest -v ./tests/test_pull_data.py -k "Test_$update_gcf" 
+        pytest -v ./tests/test_pull_data.py -k "Test_$GCF_NAME" 
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: "Deploy $GCF_NAME"
+      uses: actions/checkout@master
+      uses: actions-hub/setup-gcloud@master
+
+      with:
+        args: app deploy app.yaml
+        run: gcloud functions deploy $GCF_NAME --trigger-topic="$TRIGGER_TOPIC" --runtime="python37" --service-account=$account --source=".$SOURCE_PATH" --env-vars-file="$SOURCE_PATH/env_vars.yaml"
