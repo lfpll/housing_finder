@@ -7,5 +7,4 @@ token_gcloud.json
 *.json
 .metals
 functions/**/__init__.py
-*.yaml
 *.db

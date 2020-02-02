@@ -22,7 +22,7 @@ def parse_and_paginate(message, context):
     Raises:
         Exception: [Error, page is invalid or has no data]
     """    
-   # pubsub topic of this function
+    # pubsub topic of this function
     _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     
     # pubsub topic that the function will be passed
     _DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]     
