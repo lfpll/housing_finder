@@ -19,11 +19,12 @@ def download_page(message, context):
             data {[base64 encoded string]} -- object json encoded with data:{file_path}
             context {[object]} -- [description]
     """
-    # Bucket where the data will be stored
-    _OUT_BUCKET = os.environ["DELIVER_BUCKET"]
-    _JSON_BUCKET = os.environ["JSON_BUCKET"]     # 'projects/educare-226818/topics/child_scrape'
-    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     # 'projects/educare-226818/topics/html_path'
-    _PARSE_FUNCTION_TOPIC = os.environ["PARSE_TOPIC"]
+    # The bucket to store this html page
+    _OUT_BUCKET = os.environ["OUTPUT_HTML_BUCKET"]
+    # The topic of this function
+    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]   
+    # The topic that will be passed the json path
+    _PARSE_FUNCTION_TOPIC = os.environ["OUTPUT_JSON_TOPIC"]
 
     # Instantiating log client
     LOG_CLIENT = cloud_logging.Client()
@@ -81,10 +82,6 @@ def download_page(message, context):
             __error_path(publisher, pub_obj_encoded, tries,
                          url, error=response.status_code)
         else:  
-
-
-
-
             soup = BeautifulSoup(response.content, 'lxml')
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':

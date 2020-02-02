@@ -1,0 +1,5 @@
+{
+    "HTML_IN_BUCKET":"imoveis-data",
+    "JSON_OUT_BUCKET":"bigtable-data",
+    "OUTPUT_GCS_FOLDER":"stage"
+}

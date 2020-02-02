@@ -1,0 +1,5 @@
+{
+    "THIS_TOPIC":"projects/rental-organizer/topics/download-html",
+    "OUTPUT_JSON_TOPIC":"projects/rental-organizer/topics/html-parse-json",
+    "OUTPUT_JSON_BUCKET":"imoveis-data-json"
+}
