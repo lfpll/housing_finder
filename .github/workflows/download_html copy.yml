@@ -37,7 +37,6 @@ jobs:
 
     - name: Test with pytest
       run: |
-        ls $SOURCE_PATH
         pip install pytest
         pytest -v ./tests/test_pull_data.py -k "Test_$GCF_NAME" 
 
