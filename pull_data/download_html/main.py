@@ -10,7 +10,7 @@ HEADERS = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
 
-def download_page(message, context):
+def download_html(message, context):
     """Receives a message object from pubsub, on the key 'data' it retrieves an url
         Download this url into the _IN_BUCKET or republish if it fails
         If same name let the gcloud trigger update handle

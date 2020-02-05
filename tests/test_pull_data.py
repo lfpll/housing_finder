@@ -36,7 +36,7 @@ def submit_message_download(page_path,tries=None):
     encoded_obj = {'data': base64.b64encode(
         json.dumps(data).encode('utf-8'))}
     # Capturing the output using Mocked pubsub
-    download_html.download_page(message=encoded_obj, context='')
+    download_html.download_html(message=encoded_obj, context='')
 
 
 @pytest.fixture()
@@ -177,7 +177,7 @@ class Test_parse_rental:
         os.makedirs(out_bucket+"/stage",exist_ok=True)
 
         shutil.copy(sample_folder+"sample_download_html/normal_page.html",in_bucket)
-        parse_rental.parse_propertie_page(encoded_obj,"")
+        parse_rental.parse_rental(encoded_obj,"")
         processed = json.loads(open(out_bucket+"/%s/normal_page.json"%os.environ["OUTPUT_GCS_FOLDER"]).read())
         not_processed = json.loads(open(sample_folder+"normal_page.json").read())
 

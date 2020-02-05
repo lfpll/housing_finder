@@ -14,7 +14,7 @@ REGEXP_PRICE = re.compile(
 REGEXP_MARKERS = re.compile(r'markers=(.+?)\&')
 REGEXP_CORDINATES = re.compile('\'mapLat\'|\'mapLng\'')
 
-def parse_propertie_page(data, context):
+def parse_rental(data, context):
     """This a lambda function for cloud function on the google cloud
        This receives two inputs 
        The interesting one is the data which comes from pub/sub
