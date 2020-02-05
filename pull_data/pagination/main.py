@@ -102,7 +102,7 @@ def parse_and_paginate(message, context):
             # Publishing urls to the products topic
             for url in products_url:
                 if not (url.startswith("http://") or url.startswith("https://")):
-                    url = _BASE_URL + next_url
+                    url = _BASE_URL + url
                 product_obj = json.dumps({"url": url})
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))

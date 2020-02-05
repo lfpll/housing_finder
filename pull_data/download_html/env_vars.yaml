@@ -1,3 +1,3 @@
-THIS_TOPIC: "projects/rental-organizer/topics/download-html"
+THIS_TOPIC: "projects/rental-organizer/topics/download_html"
 OUTPUT_JSON_TOPIC: "projects/rental-organizer/topics/html-parse-json"
 OUTPUT_HTML_BUCKET: "imoveis-data-json"
