@@ -18,7 +18,7 @@ def download_html(message, context):
     Arguments:
             data {[base64 encoded string]} -- object json encoded with data:{file_path}
             context {[object]} -- [description]
-    """
+    """ 
     # The bucket to store this html page
     _OUT_BUCKET = os.environ["OUTPUT_HTML_BUCKET"]
     # The topic of this function

@@ -35,7 +35,6 @@ def parse_rental(data, context):
     _OUT_BUCKET = os.environ['JSON_OUT_BUCKET']  
     # Folder to be dropped the files inside the outbucket
     _OUTPUT_FOLDER = os.environ["OUTPUT_GCS_FOLDER"]
-
     try:
         # Initializing the data
         error_client = error_reporting.Client()

@@ -41,8 +41,6 @@ def parse_and_paginate(message, context):
     LOGGER.addHandler(HANDLER)
     error_client = error_reporting.Client()
     
-    
-
     def __error_path(publisher, pub_obj_encoded, tries, url, error):
         """Function to handle possible errors on pagination
 
