@@ -47,6 +47,7 @@ def download_html(message, context):
             raise Exception(
                 "%s was already parsed 5 times, ended with %s page" % (url, error))
     try:
+        error_client = error_reporting.Client() 
         # Getting the url of the pagination page
         data = base64.b64decode(message['data']).decode('utf-8')
         json_decoded = json.loads(data)
@@ -99,6 +100,4 @@ def download_html(message, context):
                 # Publish path to be parsed and transformed to json if new
                 publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception as error:
-        logging.error(error)
-        error_client = error_reporting.Client()
         error_client.report_exception()

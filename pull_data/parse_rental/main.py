@@ -182,7 +182,5 @@ def parse_rental(data, context):
         new_blob = bucket.blob(
                 '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
-
     except Exception as error:
-        error_client = error_reporting.Client()
         error_client.report_exception()
