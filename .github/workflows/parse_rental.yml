@@ -10,7 +10,7 @@ on:
 
 env:
   GCF_NAME: "parse_rental"
-  TRIGGER_TOPIC: "parse_rental"
+  TRIGGER_TOPIC: "html-parse-json"
   # enviroment variables, python code and requirements path
   SOURCE_PATH: "pull_data/parse_rental"
   ACCOUNT: "github-deploy-gcf@rental-organizer.iam.gserviceaccount.com"

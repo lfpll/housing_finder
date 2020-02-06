@@ -28,7 +28,7 @@ def parse_rental(data, context):
     Raises:
         Exception: [Exception for erros on the process]
     """
-
+    
     # Bucket that have the html files
     _IN_BUCKET = os.environ['HTML_IN_BUCKET']
     # Bucket to be dropped the json files  
