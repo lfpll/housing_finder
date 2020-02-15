@@ -177,8 +177,6 @@ def parse_rental(data, context):
         bucket = client.get_bucket(_OUT_BUCKET)
         folder = _OUTPUT_FOLDER
 
-        if not json_obj['new_blob']: 
-            folder = 'update_stage'
         new_blob = bucket.blob(
                 '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)

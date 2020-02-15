@@ -61,9 +61,6 @@ def download_html(message, context):
         blob.metadata = blob.metadata or {}
         blob.metadata['url'] = url
         # If blob exists let gcloud trigger update handle
-        new_blob = True
-        if blob.exists():
-            new_blob = False
 
         response = requests.get(url, headers=HEADERS)
         publisher = pubsub_v1.PublisherClient()
@@ -92,7 +89,7 @@ def download_html(message, context):
             else:
                 # Saving the html by the url name
                 pub_obj_encoded = json.dumps(
-                    {'file_path': file_name, 'url': url,'new_blob':new_blob}).encode("utf-8")
+                    {'file_path': file_name, 'url': url}).encode("utf-8")
 
                 # Storing the blob
                 blob.upload_from_string(response.text)
