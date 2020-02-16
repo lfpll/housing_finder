@@ -132,14 +132,10 @@ class Test_download_html:
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
 
-        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'", "new_blob": true}', '']
+        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'\"}', '']
         assert all([a == b for a, b in zip(msg_exp_new_blob,out.strip().split("|"))])
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
-        # Test with existing blob
-        msg_exp_update_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'", "new_blob": false}', '']
-        assert all([a == b for a, b in zip(msg_exp_update_blob,out.strip().split("|"))])
-        # removing mock blob
         shutil.rmtree(os.environ["TMP_FOLDER"])
 
     def test_max_tries(self, capsys,monkeypatch, mock_200_requests, mock_storage_client,
