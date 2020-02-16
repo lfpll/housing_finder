@@ -10,7 +10,7 @@ HEADERS = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686; rv:64.0) Gecko/20100101 Firefox/64.0'}
 
 
-def download_page(message, context):
+def download_html(message, context):
     """Receives a message object from pubsub, on the key 'data' it retrieves an url
         Download this url into the _IN_BUCKET or republish if it fails
         If same name let the gcloud trigger update handle
@@ -18,12 +18,13 @@ def download_page(message, context):
     Arguments:
             data {[base64 encoded string]} -- object json encoded with data:{file_path}
             context {[object]} -- [description]
-    """
-    # Bucket where the data will be stored
-    _OUT_BUCKET = os.environ["DELIVER_BUCKET"]
-    _JSON_BUCKET = os.environ["JSON_BUCKET"]     # 'projects/educare-226818/topics/child_scrape'
-    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     # 'projects/educare-226818/topics/html_path'
-    _PARSE_FUNCTION_TOPIC = os.environ["PARSE_TOPIC"]
+    """ 
+    # The bucket to store this html page
+    _OUT_BUCKET = os.environ["OUTPUT_HTML_BUCKET"]
+    # The topic of this function
+    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]   
+    # The topic that will be passed the json path
+    _PARSE_FUNCTION_TOPIC = os.environ["OUTPUT_JSON_TOPIC"]
 
     # Instantiating log client
     LOG_CLIENT = cloud_logging.Client()
@@ -46,6 +47,7 @@ def download_page(message, context):
             raise Exception(
                 "%s was already parsed 5 times, ended with %s page" % (url, error))
     try:
+        error_client = error_reporting.Client() 
         # Getting the url of the pagination page
         data = base64.b64decode(message['data']).decode('utf-8')
         json_decoded = json.loads(data)
@@ -59,9 +61,6 @@ def download_page(message, context):
         blob.metadata = blob.metadata or {}
         blob.metadata['url'] = url
         # If blob exists let gcloud trigger update handle
-        new_blob = True
-        if blob.exists():
-            new_blob = False
 
         response = requests.get(url, headers=HEADERS)
         publisher = pubsub_v1.PublisherClient()
@@ -80,7 +79,7 @@ def download_page(message, context):
         if response.status_code != 200:
             __error_path(publisher, pub_obj_encoded, tries,
                          url, error=response.status_code)
-        else:
+        else:  
             soup = BeautifulSoup(response.content, 'lxml')
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':
@@ -90,7 +89,7 @@ def download_page(message, context):
             else:
                 # Saving the html by the url name
                 pub_obj_encoded = json.dumps(
-                    {'file_path': file_name, 'url': url,'new_blob':new_blob}).encode("utf-8")
+                    {'file_path': file_name, 'url': url}).encode("utf-8")
 
                 # Storing the blob
                 blob.upload_from_string(response.text)
@@ -98,6 +97,4 @@ def download_page(message, context):
                 # Publish path to be parsed and transformed to json if new
                 publisher.publish(_PARSE_FUNCTION_TOPIC, pub_obj_encoded)
     except Exception as error:
-        logging.error(error)
-        error_client = error_reporting.Client()
         error_client.report_exception()

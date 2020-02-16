@@ -8,7 +8,7 @@ import json
 import base64
 from io import BytesIO
 import requests
-
+from tests.mock_gcloud import mock_storage_client, mock_cloud_error_reporting,mock_cloud_logging, mock_cloud_pubsub_v1
 import pytest
 from google.cloud import pubsub_v1
 import os
@@ -36,9 +36,8 @@ def submit_message_download(page_path,tries=None):
     encoded_obj = {'data': base64.b64encode(
         json.dumps(data).encode('utf-8'))}
     # Capturing the output using Mocked pubsub
-    download_html.download_page(message=encoded_obj, context='')
-
-
+    download_html.download_html(message=encoded_obj, context='')
+    
 @pytest.fixture()
 def mock_200_requests(monkeypatch):
     def mock_request(html_path, *args, **kwargs):
@@ -121,6 +120,9 @@ class Test_pagination:
 
 class Test_download_html:
 
+    os.environ["OUTPUT_HTML_BUCKET"] = 'deliver_bucket'
+    os.environ["THIS_TOPIC"] = 'mock_this_topic'
+    os.environ["OUTPUT_JSON_TOPIC"] = 'mock_parse-topic'
     os.environ["DELIVER_BUCKET"] = 'deliver_bucket'
     os.environ["JSON_BUCKET"] = 'json_bucket'
     os.environ["THIS_TOPIC"] = 'mock_this_topic'
@@ -133,14 +135,10 @@ class Test_download_html:
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
 
-        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": true}', '']
+        msg_exp_new_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "'+sample_page_path+'\"}', '']
         assert all([a == b for a, b in zip(msg_exp_new_blob,out.strip().split("|"))])
         submit_message_download(sample_page_path)
         out, err = capsys.readouterr()
-        # Test with existing blob
-        msg_exp_update_blob = ['PUBSUB', 'mock_parse-topic', '{"file_path": "pagination_page.html", "url": "/home/luizlobo/Documents/code/imoveis/tests/samples/sample_pagination/pagination_page.html", "new_blob": false}', '']
-        assert all([a == b for a, b in zip(msg_exp_update_blob,out.strip().split("|"))])
-        # removing mock blob
         shutil.rmtree(os.environ["TMP_FOLDER"])
 
     def test_max_tries(self, capsys,monkeypatch, mock_200_requests, mock_storage_client,
@@ -161,8 +159,10 @@ class Test_download_html:
 
 class Test_parse_rental:
     
-    os.environ['IN_BUCKET']  = "in_bucket" 
-    os.environ['OUT_BUCKET']  = "out_bucket"
+    os.environ['HTML_IN_BUCKET']  = "in_bucket" 
+    os.environ['JSON_OUT_BUCKET']  = "out_bucket"
+    os.environ["OUTPUT_GCS_FOLDER"] = "stage"
+
 
     def test_expected_output(self, sample_folder, capsys, mock_storage_client, mock_cloud_error_reporting):
         data = {'url': "normal_page.html","file_path":"normal_page.html","new_blob":True}
@@ -170,15 +170,16 @@ class Test_parse_rental:
             json.dumps(data).encode('utf-8'))}
 
         # Capturing the output using Mocked pubsub
-        in_bucket = os.environ["TMP_FOLDER"] + os.environ['IN_BUCKET']
-        out_bucket = os.environ["TMP_FOLDER"] + os.environ['OUT_BUCKET'] 
+        in_bucket = os.environ["TMP_FOLDER"] +  os.environ['HTML_IN_BUCKET']
+        out_bucket = os.environ["TMP_FOLDER"] + os.environ['JSON_OUT_BUCKET']
 
         os.makedirs(in_bucket,exist_ok=True)
         os.makedirs(out_bucket+"/stage",exist_ok=True)
 
         shutil.copy(sample_folder+"sample_download_html/normal_page.html",in_bucket)
-        parse_rental.parse_propertie_page(encoded_obj,"")
-        processed = json.loads(open(out_bucket+"/stage/normal_page.json").read())
+        parse_rental.parse_rental(encoded_obj,"")
+        processed = json.loads(open(out_bucket+"/%s/normal_page.json"%os.environ["OUTPUT_GCS_FOLDER"]).read())
+
         not_processed = json.loads(open(sample_folder+"normal_page.json").read())
 
         del processed["date_stored"]

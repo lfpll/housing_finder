@@ -21,14 +21,17 @@ def parse_and_paginate(message, context):
 
     Raises:
         Exception: [Error, page is invalid or has no data]
-    """
-    
-    # Variables to make pagination works
-    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     # 'projects/educare-226818/topics/child_scrape'
-    _DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]     # 'projects/educare-226818/topics/html_path'
-    _BASE_URL = os.environ['BASE_URL']     # father_url = "https://www.imovelweb.com.br"
-    _PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR']     # 'li.pag-go-next'
-    _CHILD_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  # 'a.go-to-posting
+    """    
+    # pubsub topic of this function
+    _THIS_FUNCTION_TOPIC = os.environ["THIS_TOPIC"]     
+    # pubsub topic that the function will be passed
+    _DOWNLOAD_HTML_TOPIC = os.environ["DOWNLOAD_HTML_TOPIC"]     
+    # base url to be aggregated to parsed url
+    _BASE_URL = os.environ['BASE_URL']     
+    # selector of the css paging button
+    _PAGINATION_CSS_SELECTOR = os.environ['PAGINATION_SELECTOR']     
+    # selector of the parsed objects
+    _CHILD_CSS_SELECTOR = os.environ['PARSE_SELECTOR']  
 
     # Instantiating log client
     LOG_CLIENT = cloud_logging.Client()
@@ -99,7 +102,7 @@ def parse_and_paginate(message, context):
             # Publishing urls to the products topic
             for url in products_url:
                 if not (url.startswith("http://") or url.startswith("https://")):
-                    url = _BASE_URL + next_url
+                    url = _BASE_URL + url
                 product_obj = json.dumps({"url": url})
                 publisher.publish(_DOWNLOAD_HTML_TOPIC,
                                   product_obj.encode('utf-8'))

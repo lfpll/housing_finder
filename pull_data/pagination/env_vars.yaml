@@ -1,0 +1,5 @@
+THIS_TOPIC: "projects/rental-organizer/topics/pagination"
+DOWNLOAD_HTML_TOPIC: "projects/rental-organizer/topics/download_html"
+BASE_URL: "https://www.imovelweb.com.br"
+PAGINATION_SELECTOR: "li.pag-go-next"
+PARSE_SELECTOR: "a.go-to-posting"

@@ -1,0 +1,58 @@
+name: Test and deploy parse_rental
+
+on:
+  push:
+    branches:
+      - devops_pipe
+    # file paths to consider in the event. Optional; defaults to all.
+    paths:
+      - 'pull_data/parse_rental/*'
+
+env:
+  GCF_NAME: "parse_rental"
+  TRIGGER_TOPIC: "html-parse-json"
+  # enviroment variables, python code and requirements path
+  SOURCE_PATH: "pull_data/parse_rental"
+  ACCOUNT: "github-deploy-gcf@rental-organizer.iam.gserviceaccount.com"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        rm -rf ./tmp
+        python -m pip install --upgrade pip
+        pip install -r "pull_data/requirements.txt"
+
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest -v ./tests/test_pull_data.py -k "Test_$GCF_NAME" 
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Deploy
+      uses: actions-hub/gcloud@master
+      env:
+        PROJECT_ID: "rental-organizer"
+        APPLICATION_CREDENTIALS: ${{secrets.GOOGLE_APPLICATION_CREDENTIALS}}
+      with:
+        args: functions deploy $GCF_NAME --trigger-topic="$TRIGGER_TOPIC" --runtime="python37" --service-account=$ACCOUNT --source="$SOURCE_PATH" --env-vars-file="$SOURCE_PATH/env_vars.yaml"

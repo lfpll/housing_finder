@@ -1,0 +1,3 @@
+HTML_IN_BUCKET: "imoveis-data-html"
+JSON_OUT_BUCKET: "imoveis-data-bigtable"
+OUTPUT_GCS_FOLDER: "stage"

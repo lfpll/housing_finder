@@ -14,9 +14,9 @@ REGEXP_PRICE = re.compile(
 REGEXP_MARKERS = re.compile(r'markers=(.+?)\&')
 REGEXP_CORDINATES = re.compile('\'mapLat\'|\'mapLng\'')
 
-def parse_propertie_page(data, context):
+def parse_rental(data, context):
     """This a lambda function for cloud function on the google cloud
-       This receiveis two inputs 
+       This receives two inputs 
        The interesting one is the data which comes from pub/sub
        This get a path an html from gcs insite data['data']['filename'] and parse this html
        At the end with this html parsed it's store on the _OUT_BUCKET as a json
@@ -28,10 +28,12 @@ def parse_propertie_page(data, context):
     Raises:
         Exception: [Exception for erros on the process]
     """
-    # Enviroment variables
-    _IN_BUCKET = os.environ['IN_BUCKET']  # 'imoveis-data'
-    _OUT_BUCKET = os.environ['OUT_BUCKET']  # bigtable-data
-
+    # Bucket that have the html files
+    _IN_BUCKET = os.environ['HTML_IN_BUCKET']
+    # Bucket to be dropped the json files  
+    _OUT_BUCKET = os.environ['JSON_OUT_BUCKET']  
+    # Folder to be dropped the files inside the outbucket
+    _OUTPUT_FOLDER = os.environ["OUTPUT_GCS_FOLDER"]
 
     try:
         # Initializing the data
@@ -174,14 +176,11 @@ def parse_propertie_page(data, context):
             ' ', '_').lower(): val for key, val in final_tups})
         
         bucket = client.get_bucket(_OUT_BUCKET)
-        folder = 'stage'
+        folder = _OUTPUT_FOLDER
 
-        if not json_obj['new_blob']: 
-            folder = 'update_stage'
         new_blob = bucket.blob(
                 '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
-
     except Exception as error:
-        error_client = error_reporting.Client()
+
         error_client.report_exception()

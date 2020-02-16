@@ -4,4 +4,3 @@ google-cloud-error_reporting
 bs4
 lxml
 requests
-

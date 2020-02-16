@@ -6,6 +6,8 @@ import shutil
 import json
 from datetime import datetime   
 from data_mainetance.check_offline_urls import Check_Live_Urls
+from tests.mock_gcloud import mock_bigquery_client,mock_storage_client
+
 
 # This is a test that removes a function from a sql lite like database based on a url column that is offlinee
 # Mock database with an url
