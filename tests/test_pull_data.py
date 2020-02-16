@@ -37,8 +37,7 @@ def submit_message_download(page_path,tries=None):
         json.dumps(data).encode('utf-8'))}
     # Capturing the output using Mocked pubsub
     download_html.download_html(message=encoded_obj, context='')
-
-
+    
 @pytest.fixture()
 def mock_200_requests(monkeypatch):
     def mock_request(html_path, *args, **kwargs):
@@ -124,6 +123,10 @@ class Test_download_html:
     os.environ["OUTPUT_HTML_BUCKET"] = 'deliver_bucket'
     os.environ["THIS_TOPIC"] = 'mock_this_topic'
     os.environ["OUTPUT_JSON_TOPIC"] = 'mock_parse-topic'
+    os.environ["DELIVER_BUCKET"] = 'deliver_bucket'
+    os.environ["JSON_BUCKET"] = 'json_bucket'
+    os.environ["THIS_TOPIC"] = 'mock_this_topic'
+    os.environ["PARSE_TOPIC"] = 'mock_parse-topic'
 
     def test_http_code_200(self, sample_folder, capsys, mock_200_requests, mock_storage_client,
                            mock_cloud_pubsub_v1, mock_cloud_logging, mock_cloud_error_reporting):
@@ -169,12 +172,14 @@ class Test_parse_rental:
         # Capturing the output using Mocked pubsub
         in_bucket = os.environ["TMP_FOLDER"] +  os.environ['HTML_IN_BUCKET']
         out_bucket = os.environ["TMP_FOLDER"] + os.environ['JSON_OUT_BUCKET']
+
         os.makedirs(in_bucket,exist_ok=True)
         os.makedirs(out_bucket+"/stage",exist_ok=True)
 
         shutil.copy(sample_folder+"sample_download_html/normal_page.html",in_bucket)
         parse_rental.parse_rental(encoded_obj,"")
         processed = json.loads(open(out_bucket+"/%s/normal_page.json"%os.environ["OUTPUT_GCS_FOLDER"]).read())
+
         not_processed = json.loads(open(sample_folder+"normal_page.json").read())
 
         del processed["date_stored"]

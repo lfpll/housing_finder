@@ -34,6 +34,7 @@ def parse_rental(data, context):
     _OUT_BUCKET = os.environ['JSON_OUT_BUCKET']  
     # Folder to be dropped the files inside the outbucket
     _OUTPUT_FOLDER = os.environ["OUTPUT_GCS_FOLDER"]
+
     try:
         # Initializing the data
         error_client = error_reporting.Client()
@@ -181,4 +182,5 @@ def parse_rental(data, context):
                 '{0}/{1}.json'.format(folder,file_path.replace('.html', '')))
         new_blob.upload_from_string(json_file)
     except Exception as error:
+
         error_client.report_exception()

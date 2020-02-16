@@ -98,3 +98,5 @@ if __name__== "__main__":
     only_urls = (url[0] for url in urls_list)
     offline_urls = check_urls.check_not_working_urls(only_urls)
     check_urls.store_data_gcs(offline_list=offline_urls,json_bucket='tmp-delete')
+
+
