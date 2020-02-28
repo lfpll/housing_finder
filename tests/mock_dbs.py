@@ -19,7 +19,7 @@ class Mock_Sql_conn:
         except Error as e:
             print(e)
 
-    def load_mock_data_parquet(self, data_path):
+    def load_mock_data_csv(self, data_path):
         df = pd.read_csv(data_path)
         df.to_sql(name='mock', con=self.conn)
 

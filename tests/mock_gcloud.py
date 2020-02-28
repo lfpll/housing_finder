@@ -55,7 +55,7 @@ def mock_storage_client(monkeypatch,sample_folder):
 @pytest.fixture()
 def mock_bigquery_client(monkeypatch, sample_folder):
     mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
-    mock_sql.load_mock_data_parquet(sample_folder+'mock_rental_data.csv')
+    mock_sql.load_mock_data_csv(sample_folder+'mock_rental_data.csv')
     mock_bq = Mock_Client_BigQuery(mock_sql)
     
     def init(*args):
@@ -72,3 +72,8 @@ def mock_bigquery_client(monkeypatch, sample_folder):
     monkeypatch.setattr(bigquery.Client,'list_rows',mock_bq.list_rows)
     monkeypatch.setattr(bigquery.Client,'get_table',mock_bq.get_table)
     monkeypatch.setattr(storage,'Client',Mock_storage_client)
+
+@pytest.fixture()
+def mock_cloud_sql(monkeypatch, sample_folder):
+    mock_sql = Mock_Sql_conn(sample_folder+'mock_data.db')
+    mock_sql.load_mock_data_csv(sample_folder+'mock_rental_data.csv')
