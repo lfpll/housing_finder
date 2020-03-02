@@ -6,12 +6,11 @@ import re
 from numpy import nan
 import os
 from sqlalchemy import create_engine
+import logging
 
-# Instantiates a client
-storage_client = storage.Client()
 
 # Return batch of json in a bucket subfolder
-def get_json_into_list(bucket_name:str ,subdir:str):
+def get_json_into_list(bucket_name:str ,subdir:str,gcs_client):
     """Go into a subdirectory in bucket and returns a pack of json in a list
     
     Arguments:
@@ -21,7 +20,7 @@ def get_json_into_list(bucket_name:str ,subdir:str):
     Returns:
         [list(dict)] -- [list of dicts with the data of the jsons]
     """    
-    bucket = storage_client.get_bucket(bucket_name)
+    bucket = gcs_client.get_bucket(bucket_name)
     blobs_list = bucket.list_blobs(prefix=subdir)
     json_list = []
     for blob in blobs_list:
@@ -66,19 +65,29 @@ def treat_imovelweb_data(imovelweb_df:pd.DataFrame):
     # Removing spaces or bizarre values at the start or beggining of the string columns
     string_columns= tmp_df.select_dtypes('object').drop(columns=['additions','imgs'])
     tmp_df[string_columns.columns.values] = string_columns.applymap(strip_with_utf8)
-
-
     tmp_df[['bairro','cidade']] = tmp_df['bairro'].str.split(",",expand=True)
     return tmp_df
 
 
 if __name__ == "__main__":
+    # Instantiates a client of google storage
+    storage_client = storage.Client()
+    # Variables used for the connection to SQL
     USER = os.environ["USER"]
     PWD = os.environ["PASSWORD"]
     IP = os.environ["IP"]
-    TABLE_NAME = os.environ['TABLE_NAME']
-    json_list = get_json_into_list("imoveis-data-bigtable","stage")
-    treated_df = treat_imovelweb_data(pd.DataFrame(json_list))
-    db_string = "postgres://{user}:{password}@{ip}/postgres".format(user=USER,password=PWD,ip=IP)
+    TABLE_NAME = os.environ["TABLE_NAME"]
+
+    # Check if variables were declared
+    if not USER < 0 or not PWD < 0 or not IP or not TABLE_NAME:
+        raise ValueError("Invalid value for SQL connection enviroment variables.")
+    # Reading the files from a json subfolder on the bucket in a list format
+    json_list = get_json_into_list(bucket_name="imoveis-data-bigtable",subdir="stage",gcs_client=storage_client)
+    
+    # Doing some treatment for a better quality data
+    treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
+
+    # Dumping treated data into stage table of SQL
+    db_string = "postgres://{user}:{password}@{ip}/postgres".format(user=USER,fopassword=PWD,ip=IP)
     db_conn = create_engine(db_string)
-    treated_df.to_sql(TABLE_NAME,db_conn)
+    treated_df.to_sql(TABLE_NAME,db_conn,if_exists='replace')
