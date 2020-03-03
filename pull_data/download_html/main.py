@@ -83,7 +83,6 @@ def download_html(message, context):
             soup = BeautifulSoup(response.content, 'lxml')
             # Special case where this website bad implemented http errors
             if soup.select('title')[0].text == 'Error 500':
-                import pdb;pdb.set_trace()
                 __error_path(publisher, pub_obj_encoded, tries, url, error=500)
                 publisher.publish(_THIS_FUNCTION_TOPIC, url.encode('utf-8'))
             else:

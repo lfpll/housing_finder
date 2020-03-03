@@ -114,7 +114,7 @@ def parse_and_paginate(message, context):
             logging.error(error)
             error_client.report_exception()
     except ConnectionError as error:
-        logging.error("PAGE MAX TRIES: %s", error.message)
+        logging.error("PAGE MAX TRIES: %s", str(error))
         error_client.report_exception()
     except Exception as error:
         logging.error(error)
