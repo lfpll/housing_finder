@@ -77,7 +77,7 @@ if __name__ == "__main__":
     PWD = os.environ["PASSWORD"]
     IP = os.environ["IP"]
     TABLE_NAME = os.environ["TABLE_NAME"]
-
+    
     # Check if variables were declared
     if not USER < 0 or not PWD < 0 or not IP or not TABLE_NAME:
         raise ValueError("Invalid value for SQL connection enviroment variables.")
@@ -86,7 +86,9 @@ if __name__ == "__main__":
     
     # Doing some treatment for a better quality data
     treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
-
+    
+    # Updating the table
+    db_conn.execute(query)
     # Dumping treated data into stage table of SQL
     db_string = "postgres://{user}:{password}@{ip}/postgres".format(user=USER,fopassword=PWD,ip=IP)
     db_conn = create_engine(db_string)
