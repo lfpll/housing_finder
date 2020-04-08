@@ -3,6 +3,7 @@ from google.cloud import storage
 import json
 import pandas as pd
 import re
+import argparse
 from numpy import nan
 import os
 from sqlalchemy import create_engine
@@ -72,6 +73,18 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
+def capture_arguments():
+    parser = argparse.ArgumentParser(description='Parse arguments of the process of ingest sql data from gcs')
+    parser.add_argument('integers', metavar='N', type=int, nargs='+',
+                        help='an integer for the accumulator')
+    parser.add_argument('--sum', dest='accumulate', action='store_const',
+                        const=sum, default=max,
+                        help='sum the integers (default: find the max)')
+
+    args = parser.parse_args()
+    print(args.accumulate(args.integers))
+    pass
+
 def execute_query_from_file(query_file_path,conn):
     query = open(query_file_path).read().replace('\n',' ')
     conn.execute(query)
@@ -110,3 +123,4 @@ if __name__ == "__main__":
     # Executing the queries of update and insert of the data
     execute_query_from_file('./update_denormalized.sql',db_conn)
     execute_query_from_file('./insert_denormalized.sql',db_conn)
+    db_conn.execute("delete from imoveis_stage")
