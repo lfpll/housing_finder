@@ -83,7 +83,6 @@ def capture_arguments():
 
     args = parser.parse_args()
     print(args.accumulate(args.integers))
-    pass
 
 def execute_query_from_file(query_file_path,conn):
     query = open(query_file_path).read().replace('\n',' ')
@@ -101,7 +100,7 @@ if __name__ == "__main__":
     USER = os.environ["USER"]
     PWD = os.environ["PASSWORD"]
     IP = os.environ["IP"]
-    TABLE_NAME = os.environ["TABLE_NAME"]
+    TABLE_NAME = os.environ["STAGE_TABLE_NAME"]
     DB = os.environ["DATABASE"]
     
     logger.debug("USER:{0}\nTable:{1}\nDatabase:{2}".format(USER,TABLE_NAME,DB))
@@ -109,9 +108,11 @@ if __name__ == "__main__":
     # Check if variables were declared
     if not USER or not PWD or not IP or not TABLE_NAME:
         raise ValueError("Invalid value for SQL connection enviroment variables.")
+
     # Reading the files from a json subfolder on the bucket in a list format
     json_list = get_json_into_list(bucket_name="imoveis-data-bigtable",subdir="stage",gcs_client=storage_client)
     logger.info("Number of records: " +str(len(json_list)))
+    
     # Doing some treatment for a better quality data
     treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
     
@@ -120,6 +121,7 @@ if __name__ == "__main__":
     logger.debug("Database connection string %s"%db_string)
     db_conn = create_engine(db_string)
     treated_df.to_sql(TABLE_NAME,db_conn,if_exists='append')
+    
     # Executing the queries of update and insert of the data
     execute_query_from_file('./update_denormalized.sql',db_conn)
     execute_query_from_file('./insert_denormalized.sql',db_conn)

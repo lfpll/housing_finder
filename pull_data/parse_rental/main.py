@@ -26,7 +26,7 @@ def parse_rental(data, context):
         context {[dict]} -- [description]
 
     Raises:
-        Exception: [Exception for erros on the process]
+        Exception: [Exception for errors on the process]
     """
     # Bucket that have the html files
     _IN_BUCKET = os.environ['HTML_IN_BUCKET']
@@ -68,7 +68,7 @@ def parse_rental(data, context):
         # Getting the description of the properties
         description = soup.find('div', id='verDatosDescripcion')
         if description is not None:
-            final_tups.append(('descricao', description.text.strip()))
+            final_tups.append(('descricao', description.text.replace('\n',' ').strip()))
 
         # Urls of the imgs
         try:
