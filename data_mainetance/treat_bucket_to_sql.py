@@ -39,10 +39,6 @@ def treat_imovelweb_data(imovelweb_df):
     """    
     tmp_df = imovelweb_df.copy()
     regexp_non_words = re.compile(r'^\W+|\W+$',flags=re.UNICODE)
-    # Treating the publication date and transforming into an integer 
-    def replace_pub_data(prefix):
-        return prefix.lower().replace('hoje','0').replace('ontem','1')
-
     # Remove spaces without affecting accent words
     def strip_with_utf8(string):
         if string is nan:
@@ -55,8 +51,6 @@ def treat_imovelweb_data(imovelweb_df):
     tmp_df["suites"] = tmp_df[["suites","suite"]].bfill(axis=1).iloc[:, 0]
     tmp_df["quartos"] = tmp_df[["quartos","quarto"]].bfill(axis=1).iloc[:, 0]
 
-    # Correcting the creation date
-    tmp_df['pub_data'] = tmp_df['pub_data'].apply(replace_pub_data).str.replace("[^0-9]","")
     
     # Removing "m2"
     tmp_df['area_util'] = tmp_df['area_util'].str.replace('m2','').astype("Float32")
@@ -88,10 +82,10 @@ def execute_query_from_file(query_file_path,conn):
     query = open(query_file_path).read().replace('\n',' ')
     conn.execute(query)
 
+if "LOG_LEVEL" in os.environ:
+    logging.basicConfig(level=os.environ["LOG_LEVEL"])
 
 logger = logging.getLogger('update_sql_table')
-if "LOG_LEVEL" in os.environ:
-    logger.setLevel(os.environ["LOG_LEVEL"])
 
 if __name__ == "__main__":
     # Instantiates a client of google storage

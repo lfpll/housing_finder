@@ -95,7 +95,6 @@ if __name__ == "__main__":
     PWD = os.environ["PASSWORD"]
     IP = os.environ["IP"]
     TABLE_NAME = os.environ["TABLE_NAME"]
-    OUT_TABLE_NAME = os.environ["OUT_TABLE_NAME"]
     DATABASE = os.environ["DATABASE"]
 
     # Loading query files into

@@ -8,3 +8,4 @@ export PASSWORD="luiz28"
 
 
 python3 ./treat_bucket_to_sql.py
+python3 ./remove_offline_urls_from_sql.py
