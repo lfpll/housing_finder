@@ -92,7 +92,7 @@ def get_offline_urls(online_function,url_iter:iter,sleep_time:int = 2,size:int =
 
 if __name__ == "__main__":
     USER = os.environ["USER"]
-    PWD = os.environ["PASSWORD"]
+    PWD = os.environ["SQL_PASSWORD"]
     IP = os.environ["IP"]
     TABLE_NAME = os.environ["TABLE_NAME"]
     DATABASE = os.environ["DATABASE"]

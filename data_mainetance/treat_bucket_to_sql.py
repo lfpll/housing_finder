@@ -106,7 +106,7 @@ if __name__ == "__main__":
     storage_client = storage.Client()
     # Variables used for the connection to SQL
     USER = os.environ["USER"]
-    PWD = os.environ["PASSWORD"]
+    PWD = os.environ["SQL_PASSWORD"]
     IP = os.environ["IP"]
     TABLE_NAME = os.environ["STAGE_TABLE_NAME"]
     DB = os.environ["DATABASE"]
