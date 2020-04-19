@@ -8,3 +8,4 @@ token_gcloud.json
 .metals
 functions/**/__init__.py
 *.db
+keys/
