@@ -8,6 +8,8 @@ from numpy import nan
 import os
 from sqlalchemy import create_engine
 import logging
+from datetime import datetime
+import pytz
 
 
 # Return batch of json in a bucket subfolder
@@ -88,6 +90,7 @@ if "LOG_LEVEL" in os.environ:
 logger = logging.getLogger('update_sql_table')
 
 if __name__ == "__main__":
+
     # Instantiates a client of google storage
     storage_client = storage.Client()
     # Variables used for the connection to SQL
@@ -115,8 +118,13 @@ if __name__ == "__main__":
     logger.debug("Database connection string %s"%db_string)
     db_conn = create_engine(db_string)
     treated_df.to_sql(TABLE_NAME,db_conn,if_exists='append')
+
+    # Uploading to the google cloud storage
+    gcs_file_name = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
+    treated_df.to_parquet("gcs://backup-json/%s.parquet"%gcs_file_name)
     
     # Executing the queries of update and insert of the data
     execute_query_from_file('./update_denormalized.sql',db_conn)
     execute_query_from_file('./insert_denormalized.sql',db_conn)
+    
     db_conn.execute("delete from imoveis_stage")
