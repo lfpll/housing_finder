@@ -127,20 +127,24 @@ if __name__ == "__main__":
     # Doing some treatment for a better quality data
     treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
 
-    # Dumping treated data into stage table of SQL
+    # Dumping treated data into stage table of sql
     db_string = "postgres://{user}:{password}@{ip}/{database}".format(
         user=USER, password=PWD, ip=IP, database=DB)
     logger.debug("Database connection string %s" % db_string)
     db_conn = create_engine(db_string)
     treated_df.to_sql(TABLE_NAME, db_conn, if_exists='append')
 
-    # Uploading to the google cloud storage
+    # Uploading the daily ingest data into gcs
+    logging.info("Saving daily data to GCS")
     gcs_file_name = datetime.now(pytz.timezone(
         "America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
     treated_df.to_parquet("gcs://backup-json/%s.parquet" % gcs_file_name)
 
     # Executing the queries of update and insert of the data
+    logging.info("Updating imoveis_online table with data that is already there")
     execute_query_from_file('./update_denormalized.sql', db_conn)
+    
+    logging.info("Inserting new valeus to imoveis_online")
     execute_query_from_file('./insert_denormalized.sql', db_conn)
 
     db_conn.execute("delete from imoveis_stage")
