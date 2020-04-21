@@ -1,4 +1,3 @@
-# Imports the Google Cloud client library
 import os
 import re
 import logging
@@ -13,9 +12,8 @@ from numpy import nan
 from sqlalchemy import create_engine
 
 
-# Return batch of json in a bucket subfolder
 def get_json_into_list(bucket_name: str, subdir: str, gcs_client):
-    """Go into a subdirectory in bucket and returns a pack of json in a list
+    """Go into a subdirectory in bucket and returns a pack of json in a list of dicts
 
     Arguments:
         bucket_name [str] -- [name of the bucket]
@@ -33,7 +31,7 @@ def get_json_into_list(bucket_name: str, subdir: str, gcs_client):
 
 
 def treat_imovelweb_data(imovelweb_df):
-    """Specific class created to treate from the imovelweb site data
+    """Specific function created to treat from the imovelweb site data
 
     Arguments:
         imovelweb_df {pd.DataFrame} -- [data frame got from joining the json]
@@ -77,24 +75,9 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
-
-def capture_arguments():
-    parser = argparse.ArgumentParser(
-        description='Parse arguments of the process of ingest sql data from gcs')
-    parser.add_argument('integers', metavar='N', type=int, nargs='+',
-                        help='an integer for the accumulator')
-    parser.add_argument('--sum', dest='accumulate', action='store_const',
-                        const=sum, default=max,
-                        help='sum the integers (default: find the max)')
-
-    args = parser.parse_args()
-    print(args.accumulate(args.integers))
-
-
 def execute_query_from_file(query_file_path, conn):
     query = open(query_file_path).read().replace('\n', ' ')
     conn.execute(query)
-
 
 if "LOG_LEVEL" in os.environ:
     logging.basicConfig(level=os.environ["LOG_LEVEL"])
@@ -102,7 +85,6 @@ if "LOG_LEVEL" in os.environ:
 logger = logging.getLogger('update_sql_table')
 
 if __name__ == "__main__":
-
     # Instantiates a client of google storage
     STORAGE_CLIENT = storage.Client()
     # Variables used for the connection to SQL
@@ -123,32 +105,35 @@ if __name__ == "__main__":
     # Reading the files from a json subfolder on the bucket in a list format
     json_list = get_json_into_list(
         bucket_name="imoveis-data-bigtable", subdir="stage", gcs_client=STORAGE_CLIENT)
-    logger.info("Number of records: " + str(len(json_list)))
+    if len(json_list) != 0:
+        logger.info("Number of records: " + str(len(json_list)))
 
-    # Doing some treatment for a better quality data
-    treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
+        # Doing some treatment for a better quality data
+        treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
 
-    # Dumping treated data into stage table of sql
-    db_string = "postgres://{user}:{password}@{ip}/{database}".format(
-        user=USER, password=PWD, ip=IP, database=DB)
-    logger.debug("Database connection string %s" % db_string)
-    db_conn = create_engine(db_string)
-    treated_df.to_sql(TABLE_NAME, db_conn, if_exists='append')
+        # Dumping treated data into stage table of sql
+        db_string = "postgres://{user}:{password}@{ip}/{database}".format(
+            user=USER, password=PWD, ip=IP, database=DB)
+        logger.debug("Database connection string %s" % db_string)
+        db_conn = create_engine(db_string)
+        treated_df.to_sql(TABLE_NAME, db_conn, if_exists='append')
 
-    # Uploading the daily ingest data into gcs
-    logging.info("Saving daily data to GCS")
-    gcs_file_name = datetime.now(pytz.timezone(
-        "America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
-    treated_df.to_parquet("gcs://backup-json/%s.parquet" % gcs_file_name)
+        # Uploading the daily ingest data into gcs
+        logging.info("Saving daily data to GCS")
+        gcs_file_name = datetime.now(pytz.timezone(
+            "America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
+        treated_df.to_parquet("gcs://backup-json/%s.parquet" % gcs_file_name)
 
-    # Executing the queries of update and insert of the data
-    logging.info(
-        "Updating imoveis_online table with data that is already there")
-    execute_query_from_file('./update_denormalized.sql', db_conn)
+        # Executing the queries of update and insert of the data
+        logging.info(
+            "Updating imoveis_online table with data that is already there")
+        execute_query_from_file('./update_denormalized.sql', db_conn)
 
-    logging.info("Inserting new valeus to imoveis_online")
-    execute_query_from_file('./insert_denormalized.sql', db_conn)
+        logging.info("Inserting new valeus to imoveis_online")
+        execute_query_from_file('./insert_denormalized.sql', db_conn)
 
-    db_conn.execute("delete from imoveis_stage")
-    subprocess.run(
-        ["gsutil", "rm", "gs://imoveis-data-bigtable/stage/*"], check=True)
+        db_conn.execute("delete from imoveis_stage")
+        subprocess.run(
+            ["gsutil","-m","rm", "gs://imoveis-data-bigtable/stage/*"], check=True)
+    else:
+        logger.info("No Records gotten")
