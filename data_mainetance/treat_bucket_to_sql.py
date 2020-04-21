@@ -1,15 +1,16 @@
 # Imports the Google Cloud client library
-from google.cloud import storage
-import json
-import pandas as pd
-import re
-import argparse
-from numpy import nan
 import os
-from sqlalchemy import create_engine
+import re
 import logging
 from datetime import datetime
+import subprocess
+import json
+import argparse
 import pytz
+import pandas as pd
+from google.cloud import storage
+from numpy import nan
+from sqlalchemy import create_engine
 
 
 # Return batch of json in a bucket subfolder
@@ -103,7 +104,7 @@ logger = logging.getLogger('update_sql_table')
 if __name__ == "__main__":
 
     # Instantiates a client of google storage
-    storage_client = storage.Client()
+    STORAGE_CLIENT = storage.Client()
     # Variables used for the connection to SQL
     USER = os.environ["USER"]
     PWD = os.environ["SQL_PASSWORD"]
@@ -121,7 +122,7 @@ if __name__ == "__main__":
 
     # Reading the files from a json subfolder on the bucket in a list format
     json_list = get_json_into_list(
-        bucket_name="imoveis-data-bigtable", subdir="stage", gcs_client=storage_client)
+        bucket_name="imoveis-data-bigtable", subdir="stage", gcs_client=STORAGE_CLIENT)
     logger.info("Number of records: " + str(len(json_list)))
 
     # Doing some treatment for a better quality data
@@ -141,10 +142,13 @@ if __name__ == "__main__":
     treated_df.to_parquet("gcs://backup-json/%s.parquet" % gcs_file_name)
 
     # Executing the queries of update and insert of the data
-    logging.info("Updating imoveis_online table with data that is already there")
+    logging.info(
+        "Updating imoveis_online table with data that is already there")
     execute_query_from_file('./update_denormalized.sql', db_conn)
-    
+
     logging.info("Inserting new valeus to imoveis_online")
     execute_query_from_file('./insert_denormalized.sql', db_conn)
 
     db_conn.execute("delete from imoveis_stage")
+    subprocess.run(
+        ["gsutil", "rm", "gs://imoveis-data-bigtable/stage/*"], check=True)
