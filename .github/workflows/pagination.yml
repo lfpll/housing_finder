@@ -3,7 +3,7 @@ name: Test and deploy pagination
 on:
   push:
     branches:
-      - devops_pipe
+      - master
     # file paths to consider in the event. Optional; defaults to all.
     paths:
       - 'pull_data/pagination/*'
