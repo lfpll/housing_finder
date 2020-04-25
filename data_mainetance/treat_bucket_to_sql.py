@@ -82,7 +82,7 @@ def execute_query_from_file(query_file_path, conn):
 if "LOG_LEVEL" in os.environ:
     logging.basicConfig(level=os.environ["LOG_LEVEL"])
 
-logger = logging.getLogger('update_sql_table')
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     # Instantiates a client of google storage
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         logging.info("Saving daily data to GCS")
         gcs_file_name = datetime.now(pytz.timezone(
             "America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
-        treated_df.to_parquet("gcs://backup-json/%s.parquet" % gcs_file_name)
+        treated_df.to_parquet("gcs://backup-json/imoveis_stage_%s.parquet" % gcs_file_name,allow_truncated_timestamps=True)
 
         # Executing the queries of update and insert of the data
         logging.info(
