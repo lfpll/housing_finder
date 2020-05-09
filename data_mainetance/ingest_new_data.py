@@ -75,10 +75,6 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
-def execute_query_from_file(query_file_path, conn):
-    query = open(query_file_path).read().replace('\n', ' ')
-    conn.execute(query)
-
 if "LOG_LEVEL" in os.environ:
     logging.basicConfig(level=os.environ["LOG_LEVEL"])
 
