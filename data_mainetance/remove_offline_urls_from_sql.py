@@ -79,9 +79,7 @@ def get_offline_urls(online_function, url_iter: iter, size: int = 50):
     """
     offline_urls = []
     print('ae')
-    url_size = 0
-    while url_size < size:
-        url = next(url_iter, False)
+    for url in url_iter:
         logging.info("checking %s" % url)
         if not url:
             logger.info("No Urls anymore")
@@ -105,29 +103,17 @@ if __name__ == "__main__":
         CONN.cursor(), table_name=TABLE_NAME, urls_column_name='page_url')
 
     # Creating the temporary table for the offline urls
-    TEMP_TABLE_QUERY = "DROP TABLE IF EXISTS tmp_off_urls; CREATE TABLE tmp_off_urls(id SERIAL PRIMARY KEY, url TEXT NOT NULL);"
+    TEMP_TABLE_QUERY = "DROP TABLE IF EXISTS TMP_OFFLINE_URLS; CREATE TABLE TMP_OFFLINE_URLS(id SERIAL PRIMARY KEY, url TEXT NOT NULL);"
     CURSOR_DELETE = CONN.cursor()
     CURSOR_DELETE.execute(TEMP_TABLE_QUERY)
     CONN.commit()
 
-    # Cleaning the offline urls and moving into the offline table
-    # Loading query files into
-    insert_offline_query = open(
-        './insert_offline_records.sql').read().replace('\n', ' ')
-    delete_offline_query = open(
-        './delete_offline_data.sql').read().replace('\n', ' ')
-
-    while next(URLS_ITERATOR, False):
-        logger.info("Checking 20 offline urls")
-        urls_string = '\'),( \''.join(get_offline_urls(online_function=is_url_online_imoveisweb, url_iter=URLS_ITERATOR))
-        insert_query = "INSERT INTO tmp_off_urls(url) VALUES (\'%s\');" % (
-            urls_string)
-        logger.info("Updating more 20 offline urls")
-        CURSOR_DELETE.execute(insert_query)
-        CURSOR_DELETE.execute(insert_offline_query)
-        CURSOR_DELETE.execute(delete_offline_query)
-        CONN.commit()
-
-    # Loading treated dataframe into bigquery
-    imoveis_online_df = pd.read_sql('SELECT * FROM imoveis_online', CONN)
-    imoveis_online_df.to_gbq(destination_table="rental_organizer.imoveis_online", project_id='rental-organizer',if_exists='replace')
+    # Iterating through urls and checking offline
+    # TODO replace with async to microservice mock user
+    offline_urls = get_offline_urls(online_function=is_url_online_imoveisweb, url_iter=URLS_ITERATOR)
+    logger.info("Ingesting {0} offline urls").format(str(len(offline_urls)))
+    urls_string = '\'),( \''.join(offline_urls)
+    insert_offline_urls_query = "INSERT INTO TMP_OFFLINE_URLS(url) VALUES (\'%s\');" % (
+        urls_string)
+    CURSOR_DELETE.execute(insert_offline_urls_query)
+    CONN.commit()
