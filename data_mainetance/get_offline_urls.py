@@ -41,24 +41,21 @@ def get_urls_with_id(cursor, table_name: str, urls_column_name: str):
     Returns:
         [iter] -- [iterator with all the urls and index of tables]
     """
-    query = 'SELECT index,{column} from {table} '.format(
+    query = 'SELECT {column} from {table} '.format(
         column=urls_column_name, table=table_name)
     cursor.execute(query)
-    return (url[1] for url in cursor.fetchall())
+    return (url[0] for url in cursor.fetchall())
 
 
-def get_offline_urls(online_function, url_iter: iter, size: int = 50):
+
+def get_offline_urls(online_function, url_iter: iter):
     """ Check the iterator for offline urls based on the size
 
     Arguments:
         online_function {function} -- [function that checks if the urls is offline]
         url_iter {iter} -- [iterator with the urls]
 
-    Keyword Arguments:
-        sleep_time {int} -- [time to wait between two urls] (default: {2})
-        size {int} -- [numbers of urls to be checked] (default: {50})
-
-    Returns:
+    Returns:`
         [list] -- [a list with all the offline urls]
     """
     offline_urls = []
@@ -93,7 +90,7 @@ if __name__ == "__main__":
 
     # Checking if the offline urls are live
     offline_urls = get_offline_urls(online_function=is_url_online_imoveisweb, url_iter=URLS_ITERATOR)
-    logger.info("Ingesting {0} offline urls").format(str(len(offline_urls)))
+    logger.info("Ingesting {0} offline urls".format(str(len(offline_urls))))
     urls_string = '\'),( \''.join(offline_urls)
     insert_offline_urls_query = "INSERT INTO TMP_OFFLINE_URLS(url) VALUES (\'%s\');" % (
         urls_string)

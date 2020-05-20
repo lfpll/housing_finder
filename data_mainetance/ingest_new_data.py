@@ -75,9 +75,6 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
-if "LOG_LEVEL" in os.environ:
-    logging.basicConfig(level=os.environ["LOG_LEVEL"])
-
 logger = logging.getLogger('update_sql_table')
 
 if __name__ == "__main__":
@@ -96,11 +93,11 @@ if __name__ == "__main__":
     logger.debug("USER:{0}\nTable:{1}\nDatabase:{2}".format(
         USER, STAGE_TABLE, DB))
 
-    # Check if variables were declared
     if not USER or not PWD or not IP or not STAGE_TABLE:
         raise ValueError(
             "Invalid value for SQL connection enviroment variables.")
-
+    
+    logger.info("Starting ingesting files from gcs")
     # Reading the files from a json subfolder on the bucket in a list format
     json_list = get_json_into_list(
         bucket_name=BUCKET_NAME, subdir=SUBDIR, gcs_client=STORAGE_CLIENT)
@@ -112,10 +109,9 @@ if __name__ == "__main__":
         treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
 
         # Dumping treated data into stage table of sql
-        db_string = "postgres://{user}:{password}@{ip}/{database}".format(
-            user=USER, password=PWD, ip=IP, database=DB)
+        db_string = "postgres://{user}:{password}@{ip}/{database}".format(user=USER, password=PWD, ip=IP, database=DB)
         logger.debug("Database connection string %s" % db_string)
         db_conn = create_engine(db_string)
-        treated_df.to_sql(STAGE_TABLE, db_conn, if_exists='replace')
+        treated_df.to_sql(STAGE_TABLE, db_conn, if_exists='append',index=False)
     else:
         logger.info("No Records found on Google Cloud Storage at gs://{0}/{1}".format(BUCKET_NAME,SUBDIR))
