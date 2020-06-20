@@ -33,7 +33,7 @@ dag_ingest = DAG(
 )
 
 
-default_args['dag'] =dag_ingest
+default_args['dag'] = dag_ingest
 
 date_today = datetime.now(pytz.timezone(
         "America/Sao_Paulo")).strftime('%Y-%m-%d-%Hhs')
@@ -50,7 +50,7 @@ run_ingest_python= """
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/ingest_new_data.py
+                    python3 ~/data_mainetance/ingest_new_data.py
 
                 """.format(PWD=os.environ['SQL_PWD']
                               ,USER=USER
@@ -66,7 +66,7 @@ ingest_delete_urls="""
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/get_offline_urls.py
+                    python3 ~/data_mainetance/get_offline_urls.py
                     """.format(PWD=os.environ['SQL_PWD']
                                ,USER=USER
                                ,POSTGRES_IP=POSTGRES_IP
@@ -79,7 +79,7 @@ ingest_new_data = SSHOperator(
     task_id="ingesting_new_data",
     ssh_conn_id="ssh_python",
     command=run_ingest_python
-)
+)   
 
 
 get_offline_urls = SSHOperator(
@@ -124,7 +124,7 @@ upload_data_to_gcs="""
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/backup_to_gcs.py
+                    python3 ~/data_mainetance/backup_to_gcs.py
                     """.format(PWD=os.environ['SQL_PWD']
                                ,USER=USER
                                ,POSTGRES_IP=POSTGRES_IP
