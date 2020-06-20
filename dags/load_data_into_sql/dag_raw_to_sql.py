@@ -52,7 +52,7 @@ run_ingest_python= """
                     source ~/venv/bin/activate
                     python3 ./data_mainetance/ingest_new_data.py
 
-                   """.format(PWD=os.environ['SQL_PWD']
+                """.format(PWD=os.environ['SQL_PWD']
                               ,USER=USER
                               ,POSTGRES_IP=POSTGRES_IP
                               ,STAGE_TABLE=STAGE_DATA_TABLE
@@ -74,21 +74,6 @@ ingest_delete_urls="""
                                ,DB=DATABASE)
 
 
-upload_data_to_gcs="""
-                    export SQL_PASSWORD={PWD}
-                    export USER="{USER}"
-                    export IP="{POSTGRES_IP}"
-                    export TABLE_NAME="{ONLINE_TABLE}"
-                    export DATABASE="{DB}"
-
-                    source ~/venv/bin/activate
-                    python3 ./data_mainetance/
-                    """.format(PWD=os.environ['SQL_PWD']
-                               ,USER=USER
-                               ,POSTGRES_IP=POSTGRES_IP
-                               ,ONLINE_TABLE=IMOVEIS_TABLE
-                               ,DB=DATABASE)
-
 ingest_new_data = SSHOperator(
     default_args=default_args,
     task_id="ingesting_new_data",
@@ -104,12 +89,6 @@ get_offline_urls = SSHOperator(
     command=ingest_delete_urls
 )
 
-send_sql_to_gcs = SSHOperator(
-    default_args=default_args,
-    task_id='send_sql_to_gcs',
-    ssh_conn_id='ssh_python',
-    command=
-)
 
 # SQL queries
 separate_new_data = PostgresOperator(
@@ -136,7 +115,32 @@ clean_stage_tables = PostgresOperator(
     database=DATABASE       
 )
 
+# Uploading daily updates to GCS
+upload_data_to_gcs="""
+                    export SQL_PASSWORD={PWD}
+                    export USER="{USER}"
+                    export IP="{POSTGRES_IP}"
+                    export TABLE_NAME="{ONLINE_TABLE}"
+                    export DATABASE="{DB}"
+
+                    source ~/venv/bin/activate
+                    python3 ./data_mainetance/backup_to_gcs.py
+                    """.format(PWD=os.environ['SQL_PWD']
+                               ,USER=USER
+                               ,POSTGRES_IP=POSTGRES_IP
+                               ,ONLINE_TABLE=IMOVEIS_TABLE
+                               ,DB=DATABASE)
+
+
+send_sql_to_gcs = SSHOperator(
+    default_args=default_args,
+    task_id='send_sql_to_gcs',
+    ssh_conn_id='ssh_python',
+    command=upload_data_to_gcs
+)
 
 [ingest_new_data, get_offline_urls] >> separate_new_data  
 [ingest_new_data, get_offline_urls] >> update_online_table
 [ingest_new_data, get_offline_urls] >> clean_stage_tables
+
+[separate_new_data,update_online_table,clean_stage_tables] >> send_sql_to_gcs
