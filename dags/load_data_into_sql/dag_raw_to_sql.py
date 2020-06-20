@@ -50,7 +50,7 @@ run_ingest_python= """
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./new_code/ingest_new_data.py
+                    python3 ./data_mainetance/ingest_new_data.py
 
                    """.format(PWD=os.environ['SQL_PWD']
                               ,USER=USER
@@ -66,26 +66,28 @@ ingest_delete_urls="""
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./new_code/get_offline_urls.py
+                    python3 ./data_mainetance/get_offline_urls.py
                     """.format(PWD=os.environ['SQL_PWD']
                                ,USER=USER
                                ,POSTGRES_IP=POSTGRES_IP
                                ,ONLINE_TABLE=IMOVEIS_TABLE
                                ,DB=DATABASE)
 
-shell_check_gcf_run="""
-                    cloud_function_name="{1}"
 
-                    result=''
-                    # Checking if there is cloud function running
-                    while [ "$result" != "Listed 0 items." ]
-                    do
-                        first_date=$(date --date '-5 min' +"%Y-%m-%d %T")
-                        last_date=$(date +"%Y-%m-%d %T")
-                        result=((gcloud functions logs read --limit 1 --filter name=$cloud_function_name --start-time="$first_date" --end-time="$last_date") 2>&1)
-                        sleep 60
-                    done"""
+upload_data_to_gcs="""
+                    export SQL_PASSWORD={PWD}
+                    export USER="{USER}"
+                    export IP="{POSTGRES_IP}"
+                    export TABLE_NAME="{ONLINE_TABLE}"
+                    export DATABASE="{DB}"
 
+                    source ~/venv/bin/activate
+                    python3 ./data_mainetance/
+                    """.format(PWD=os.environ['SQL_PWD']
+                               ,USER=USER
+                               ,POSTGRES_IP=POSTGRES_IP
+                               ,ONLINE_TABLE=IMOVEIS_TABLE
+                               ,DB=DATABASE)
 
 ingest_new_data = SSHOperator(
     default_args=default_args,
@@ -102,13 +104,19 @@ get_offline_urls = SSHOperator(
     command=ingest_delete_urls
 )
 
+send_sql_to_gcs = SSHOperator(
+    default_args=default_args,
+    task_id='send_sql_to_gcs',
+    ssh_conn_id='ssh_python',
+    command=
+)
 
 # SQL queries
 separate_new_data = PostgresOperator(
     default_args=default_args,
     task_id="stage_new_and_update_data",
     postgres_conn_id="postgres_db",
-    sql="/sql/insert_stage_data.sql",
+    sql="/load_data_into_sql/sql/insert_stage_data.sql",
     database=DATABASE
 )
 
@@ -116,7 +124,7 @@ update_online_table = PostgresOperator(
     default_args=default_args,
     task_id="upsert_table",
     postgres_conn_id="postgres_db",
-    sql="/sql/insert_new_data.sql",
+    sql="/load_data_into_sql/sql/insert_new_data.sql",
     database=DATABASE
 )
 
@@ -124,7 +132,7 @@ clean_stage_tables = PostgresOperator(
     default_args=default_args,
     task_id="clean_stage_tables",
     postgres_conn_id="postgres_db",
-    sql="/sql/delete_offline_data.sql",
+    sql="/load_data_into_sql/sql/delete_offline_data.sql",
     database=DATABASE       
 )
 
