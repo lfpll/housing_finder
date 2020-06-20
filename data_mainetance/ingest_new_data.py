@@ -75,6 +75,7 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
+logging.basicConfig(level=20)
 logger = logging.getLogger('update_sql_table')
 
 if __name__ == "__main__":
