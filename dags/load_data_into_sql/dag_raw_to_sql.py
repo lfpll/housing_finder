@@ -14,6 +14,9 @@ STAGE_UPDATE_DATA='stage_imoveis_update'
 TMP_URLS_TABLE='tmp_offline_urls'
 POSTGRES_IP="0.0.0.0"
 
+STAGE_GCS_FOLDER="gs://imoveis-data-bigtable/stage"
+
+
 default_args = {
     'start_date': days_ago(2),
     'owner': 'airflow',
@@ -95,7 +98,7 @@ separate_new_data = PostgresOperator(
     default_args=default_args,
     task_id="stage_new_and_update_data",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/insert_stage_data.sql",
+    sql="/sql/insert_stage_data.sql",
     database=DATABASE
 )
 
@@ -103,7 +106,7 @@ update_online_table = PostgresOperator(
     default_args=default_args,
     task_id="upsert_table",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/insert_new_data.sql",
+    sql="/sql/insert_new_data.sql",
     database=DATABASE
 )
 
@@ -111,7 +114,7 @@ clean_stage_tables = PostgresOperator(
     default_args=default_args,
     task_id="clean_stage_tables",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/delete_offline_data.sql",
+    sql="/sql/delete_offline_data.sql",
     database=DATABASE       
 )
 
@@ -139,8 +142,26 @@ send_sql_to_gcs = SSHOperator(
     command=upload_data_to_gcs
 )
 
+
+shell_clean_stage_gcs = """
+               gsutil -m rm -rf {stage}
+               """.format(stage=STAGE_GCS_FOLDER)
+
+
+
+clean_stage_folder_gcs = SSHOperator(
+    default_args=default_args,
+    task_id='clean_stage_folder_gcs',
+    ssh_conn_id='ssh_python',
+    command=shell_clean_stage_gcs
+)
+
+
+
 [ingest_new_data, get_offline_urls] >> separate_new_data  
 [ingest_new_data, get_offline_urls] >> update_online_table
 [ingest_new_data, get_offline_urls] >> clean_stage_tables
 
 [separate_new_data,update_online_table,clean_stage_tables] >> send_sql_to_gcs
+
+send_sql_to_gcs >> clean_stage_folder_gcs
