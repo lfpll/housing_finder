@@ -32,7 +32,8 @@ default_args = {
 dag_ingest = DAG(
     'ingest_rental',
     default_args=default_args,
-    description='DAG that treat_Data, load into SQL and store on GCS'
+    description='DAG that treat_Data, load into SQL and store on GCS',
+    schedule_interval='0 9 * * *'
 )
 
 
