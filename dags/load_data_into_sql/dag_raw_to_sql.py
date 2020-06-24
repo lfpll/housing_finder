@@ -14,6 +14,9 @@ STAGE_UPDATE_DATA='stage_imoveis_update'
 TMP_URLS_TABLE='tmp_offline_urls'
 POSTGRES_IP="0.0.0.0"
 
+STAGE_GCS_FOLDER="gs://imoveis-data-bigtable/stage"
+
+
 default_args = {
     'start_date': days_ago(2),
     'owner': 'airflow',
@@ -29,11 +32,12 @@ default_args = {
 dag_ingest = DAG(
     'ingest_rental',
     default_args=default_args,
-    description='DAG that treat_Data, load into SQL and store on GCS'
+    description='DAG that treat_Data, load into SQL and store on GCS',
+    schedule_interval='0 9 * * *'
 )
 
 
-default_args['dag'] =dag_ingest
+default_args['dag'] = dag_ingest
 
 date_today = datetime.now(pytz.timezone(
         "America/Sao_Paulo")).strftime('%Y-%m-%d-%Hhs')
@@ -50,7 +54,7 @@ run_ingest_python= """
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/ingest_new_data.py
+                    python3 ~/data_mainetance/ingest_new_data.py
 
                 """.format(PWD=os.environ['SQL_PWD']
                               ,USER=USER
@@ -66,7 +70,7 @@ ingest_delete_urls="""
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/get_offline_urls.py
+                    python3 ~/data_mainetance/get_offline_urls.py
                     """.format(PWD=os.environ['SQL_PWD']
                                ,USER=USER
                                ,POSTGRES_IP=POSTGRES_IP
@@ -79,7 +83,7 @@ ingest_new_data = SSHOperator(
     task_id="ingesting_new_data",
     ssh_conn_id="ssh_python",
     command=run_ingest_python
-)
+)   
 
 
 get_offline_urls = SSHOperator(
@@ -95,7 +99,7 @@ separate_new_data = PostgresOperator(
     default_args=default_args,
     task_id="stage_new_and_update_data",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/insert_stage_data.sql",
+    sql="/sql/insert_stage_data.sql",
     database=DATABASE
 )
 
@@ -103,7 +107,7 @@ update_online_table = PostgresOperator(
     default_args=default_args,
     task_id="upsert_table",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/insert_new_data.sql",
+    sql="/sql/insert_new_data.sql",
     database=DATABASE
 )
 
@@ -111,7 +115,7 @@ clean_stage_tables = PostgresOperator(
     default_args=default_args,
     task_id="clean_stage_tables",
     postgres_conn_id="postgres_db",
-    sql="/load_data_into_sql/sql/delete_offline_data.sql",
+    sql="/sql/delete_offline_data.sql",
     database=DATABASE       
 )
 
@@ -124,7 +128,7 @@ upload_data_to_gcs="""
                     export DATABASE="{DB}"
 
                     source ~/venv/bin/activate
-                    python3 ./data_mainetance/backup_to_gcs.py
+                    python3 ~/data_mainetance/backup_to_gcs.py
                     """.format(PWD=os.environ['SQL_PWD']
                                ,USER=USER
                                ,POSTGRES_IP=POSTGRES_IP
@@ -139,8 +143,26 @@ send_sql_to_gcs = SSHOperator(
     command=upload_data_to_gcs
 )
 
+
+shell_clean_stage_gcs = """
+               gsutil -m rm -rf {stage}
+               """.format(stage=STAGE_GCS_FOLDER)
+
+
+
+clean_stage_folder_gcs = SSHOperator(
+    default_args=default_args,
+    task_id='clean_stage_folder_gcs',
+    ssh_conn_id='ssh_python',
+    command=shell_clean_stage_gcs
+)
+
+
+
 [ingest_new_data, get_offline_urls] >> separate_new_data  
 [ingest_new_data, get_offline_urls] >> update_online_table
 [ingest_new_data, get_offline_urls] >> clean_stage_tables
 
 [separate_new_data,update_online_table,clean_stage_tables] >> send_sql_to_gcs
+
+send_sql_to_gcs >> clean_stage_folder_gcs
