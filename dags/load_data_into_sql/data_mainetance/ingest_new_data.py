@@ -75,36 +75,34 @@ def treat_imovelweb_data(imovelweb_df):
 
     return tmp_df
 
-def execute_query_from_file(query_file_path, conn):
-    query = open(query_file_path).read().replace('\n', ' ')
-    conn.execute(query)
-
-if "LOG_LEVEL" in os.environ:
-    logging.basicConfig(level=os.environ["LOG_LEVEL"])
-
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=20)
+logger = logging.getLogger('update_sql_table')
 
 if __name__ == "__main__":
     # Instantiates a client of google storage
+
     STORAGE_CLIENT = storage.Client()
     # Variables used for the connection to SQL
     USER = os.environ["USER"]
     PWD = os.environ["SQL_PASSWORD"]
     IP = os.environ["IP"]
-    TABLE_NAME = os.environ["STAGE_TABLE_NAME"]
+    STAGE_TABLE = os.environ["STAGE_TABLE_NAME"]
     DB = os.environ["DATABASE"]
 
+    BUCKET_NAME="imoveis-data-bigtable"
+    SUBDIR="stage"
     logger.debug("USER:{0}\nTable:{1}\nDatabase:{2}".format(
-        USER, TABLE_NAME, DB))
+        USER, STAGE_TABLE, DB))
 
-    # Check if variables were declared
-    if not USER or not PWD or not IP or not TABLE_NAME:
+    if not USER or not PWD or not IP or not STAGE_TABLE:
         raise ValueError(
             "Invalid value for SQL connection enviroment variables.")
-
+    
+    logger.info("Starting ingesting files from gcs")
     # Reading the files from a json subfolder on the bucket in a list format
     json_list = get_json_into_list(
-        bucket_name="imoveis-data-bigtable", subdir="stage", gcs_client=STORAGE_CLIENT)
+        bucket_name=BUCKET_NAME, subdir=SUBDIR, gcs_client=STORAGE_CLIENT)
+
     if len(json_list) != 0:
         logger.info("Number of records: " + str(len(json_list)))
 
@@ -112,28 +110,9 @@ if __name__ == "__main__":
         treated_df = treat_imovelweb_data(imovelweb_df=pd.DataFrame(json_list))
 
         # Dumping treated data into stage table of sql
-        db_string = "postgres://{user}:{password}@{ip}/{database}".format(
-            user=USER, password=PWD, ip=IP, database=DB)
+        db_string = "postgres://{user}:{password}@{ip}/{database}".format(user=USER, password=PWD, ip=IP, database=DB)
         logger.debug("Database connection string %s" % db_string)
         db_conn = create_engine(db_string)
-        treated_df.to_sql(TABLE_NAME, db_conn, if_exists='append')
-
-        # Uploading the daily ingest data into gcs
-        logging.info("Saving daily data to GCS")
-        gcs_file_name = datetime.now(pytz.timezone(
-            "America/Sao_Paulo")).strftime('imoveisweb-%Y-%m-%d-%Hhs')
-        treated_df.to_parquet("gcs://backup-json/imoveis_stage_%s.parquet" % gcs_file_name,allow_truncated_timestamps=True)
-
-        # Executing the queries of update and insert of the data
-        logging.info(
-            "Updating imoveis_online table with data that is already there")
-        execute_query_from_file('./update_denormalized.sql', db_conn)
-
-        logging.info("Inserting new valeus to imoveis_online")
-        execute_query_from_file('./insert_denormalized.sql', db_conn)
-
-        db_conn.execute("delete from imoveis_stage")
-        subprocess.run(
-            ["gsutil","-m","rm", "gs://imoveis-data-bigtable/stage/*"], check=True)
+        treated_df.to_sql(STAGE_TABLE, db_conn, if_exists='append',index=False)
     else:
-        logger.info("No Records gotten")
+        logger.info("No Records found on Google Cloud Storage at gs://{0}/{1}".format(BUCKET_NAME,SUBDIR))
