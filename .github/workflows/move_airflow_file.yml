@@ -10,6 +10,7 @@ on:
     # file paths to consider in the event. Optional; defaults to all.
     paths:
       - 'dags/load_data_into_sql/*'
+      - '.github/workflows/move_airflow_file.yml'
       
 jobs:
   deploy:
