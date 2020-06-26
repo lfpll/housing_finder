@@ -26,4 +26,4 @@ jobs:
         PROJECT_ID: "rental-organizer"
         APPLICATION_CREDENTIALS: ${{secrets.GOOGLE_APPLICATION_CREDENTIALS}}
       with:
-          args: compute scp --service-account=$ACCOUNT --recurse dags/* instance-4:/home/luizloureiro_alunos_utfpr_edu_br/airflow/dags  
+          args: compute scp --impersonate-service-account=$ACCOUNT --recurse dags/* instance-4:/home/luizloureiro_alunos_utfpr_edu_br/airflow/dags  
