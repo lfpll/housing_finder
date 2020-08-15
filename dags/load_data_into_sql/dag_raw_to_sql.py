@@ -1,9 +1,11 @@
 from datetime import timedelta,datetime
 import pytz
 import os
+from datetime import datetime
 from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.contrib.operators.ssh_operator import SSHOperator
+from airflow.operators.bash_operator import BashOperator
 from airflow.utils.dates import days_ago
 
 # SQL table names
@@ -16,21 +18,21 @@ POSTGRES_IP="0.0.0.0"
 
 STAGE_GCS_FOLDER="gs://imoveis-data-bigtable/stage"
 
-
 default_args = {
-    'start_date': days_ago(2),
+    'start_date': datetime(2020, 6, 27),
     'owner': 'airflow',
     'depends_on_past': True,
     'email': ['luizfpll@gmail.com'],
     'email_on_failure': True,
     'email_on_retry': True,
     'retries': 0,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=5)
 }
 
 
 dag_ingest = DAG(
     'ingest_rental',
+    catchup=False,
     default_args=default_args,
     description='DAG that treat_Data, load into SQL and store on GCS',
     schedule_interval='0 9 * * *'
@@ -157,12 +159,16 @@ clean_stage_folder_gcs = SSHOperator(
     command=shell_clean_stage_gcs
 )
 
-
+turn_off_machine = BashOperator(
+    bash_command="poweroff"
+)
 
 [ingest_new_data, get_offline_urls] >> separate_new_data  
 [ingest_new_data, get_offline_urls] >> update_online_table
 [ingest_new_data, get_offline_urls] >> clean_stage_tables
 
 [separate_new_data,update_online_table,clean_stage_tables] >> send_sql_to_gcs
-
+    
 send_sql_to_gcs >> clean_stage_folder_gcs
+
+clean_stage_folder_gcs >> turn_off_machine 
