@@ -42,10 +42,10 @@ FROM STAGE_IMOVEIS_UPDATE as sd
 where IMOVEIS_ONLINE.page_url = sd.page_url;
 
 
-
 UPDATE IMOVEIS_ONLINE
 SET date_deleted = NOW() 
 WHERE page_url in (
     select url from
     tmp_offline_urls
-)
+) and date_deleted is null;
+
