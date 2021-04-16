@@ -1,4 +1,4 @@
-# Parse Rentals
+# Parse Rentals [Deprecated - The website implemented a captcha that blocks automated requests]
 
 This is a small project that started with me having some problems with finding fair price housing near my work.
 
